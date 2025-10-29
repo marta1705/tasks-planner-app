@@ -12,14 +12,14 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return; // jeśli stan autentykacji jest w trakcie ładowania, nie zostana wykonane zadne przekierowania
     //const inAuthGroup = segments[0] !== "login" && segments[0] !== "_sitemap";
-    const inAuthGroup = segments[0] === "login";
+    const inAuthGroup = segments[0] === "login" || segments[0] === "register";
     // jeśli użytkownik nie jest zalogowany i nie jest na ekranie logowania zostanie tam przekierowany.
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/login");
     }
     // jeśli użytkownik jest zalogowany i jest na ekranie logowania, zostanie przekierowany do aplikacji.
-    else if (!isAuthenticated && !inAuthGroup) {
-      router.replace("/login"); // przekierowanie na główny ekran aplikacji
+    else if (isAuthenticated && inAuthGroup) {
+      router.replace("/"); // przekierowanie na główny ekran aplikacji
     }
   }, [isAuthenticated, loading, segments]); // efekt uruchomi się ponownie, gdy zmieni się stan autentykacji
   if (loading) {
@@ -32,9 +32,9 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="login" />
-      {/*<Stack.Screen name="register" />*/}
+      <Stack.Screen name="register" />
     </Stack>
   );
 }

@@ -1,5 +1,6 @@
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged } from "firebase/auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../services/firebase";
 
 const AuthContext = createContext();
 
@@ -12,14 +13,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   const value = {
@@ -30,12 +29,8 @@ export function AuthProvider({ children }) {
 
   // dopóki nie zostanie sprawdzony stan autentykacji, aby uniknąć migotania ekranu
   // if (loading) {
-  //   return null; 
+  //   return null;
   // }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

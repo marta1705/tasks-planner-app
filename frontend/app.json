@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "taskplanner", // Display name for the app
+    "slug": "taskplanner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "tasks", // Custom scheme for deep linking
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
