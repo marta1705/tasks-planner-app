@@ -1,33 +1,37 @@
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
-import { getAuth, signOut } from "firebase/auth";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { FloatingAction } from "react-native-floating-action";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Ionicons } from "@expo/vector-icons";
 import Entypo from "@expo/vector-icons/Entypo";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { getAuth, reload } from "firebase/auth";
+import React, { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FloatingAction } from "react-native-floating-action";
 import PetWidget from "../PetWidget";
+
 
 export default function Index() {
   const auth = getAuth();
   const router = useRouter();
   const [userName, setUserName] = useState("");
 
-  useEffect(() => {
-    if (auth.currentUser && auth.currentUser.displayName) {
-      setUserName(auth.currentUser.displayName);
-    }
-  }, [auth.currentUser]);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
 
-  const handleLogout = () => {
-    signOut(auth)
-      .then(() => {
-        console.log("User logged out");
-        router.replace("/login");
-      })
-      .catch((error) => {
-        console.error("Logout error:", error);
-      });
-  };
+      (async () => {
+        if (auth.currentUser) {
+          try {
+            await reload(auth.currentUser); // pobranie aktualnych danych użytkownika
+            if (active) setUserName(auth.currentUser.displayName || "");
+          } catch (e) {
+            console.log("reload error", e);
+          }
+        }
+      })();
+
+      return () => { active = false; };
+    }, [])
+  );
 
   const actions = [
     {
@@ -48,10 +52,13 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>{`Witaj ${userName}`}</Text>
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Wyloguj się</Text>
+      <TouchableOpacity
+        style={styles.settingsButton}
+        onPress={() => router.push("/settings")}>
+        <Ionicons name="settings-outline" size={22} color="white" />
+        <Text style={styles.settingsButtonText}>Ustawienia</Text>
       </TouchableOpacity>
+      <Text style={styles.text}>{`Witaj ${userName}`}</Text>
       <PetWidget />
       <FloatingAction
         actions={actions}
@@ -91,9 +98,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  logoutButtonText: {
-    color: "#fff",
-    fontSize: 16,
+  settingsButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#1e74c4ff",
+    borderRadius: 20,
+    elevation: 3,
+
+    shadowColor: "#ffffffff",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  settingsButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
     fontWeight: "600",
+    color: "#fff",
   },
 });

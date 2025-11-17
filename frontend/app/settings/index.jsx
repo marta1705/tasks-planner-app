@@ -1,0 +1,402 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signOut, updateProfile, verifyBeforeUpdateEmail } from "firebase/auth";
+import { doc, getFirestore, updateDoc } from "firebase/firestore";
+import { useState } from "react";
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+
+export default function SettingsScreen() {
+  const auth = getAuth();
+  const db = getFirestore();
+  const router = useRouter();
+
+  const user = auth.currentUser;
+
+  const [name, setName] = useState(user?.displayName || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [loading, setLoading] = useState(false);
+
+  // Modal do zmiany emaila
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [passwordForEmail, setPasswordForEmail] = useState("");
+
+  // Modal zmiany hasła
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  // Zapis imienia do Firebase
+  const handleSaveName = async () => {
+    try {
+      setLoading(true);
+
+      await updateProfile(user, {
+        displayName: name,
+      });
+
+      await updateDoc(doc(db, "users", user.uid), {
+        name: name,
+      });
+
+      await reload(user);
+
+      Alert.alert("Zmiana powiodła się", "Imię zostało zaktualizowane.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Błąd", "Nie udało się zmienić imienia.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Zapis emaila
+  const handleChangeEmail = async () => {
+    try {
+      setLoading(true);
+
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        passwordForEmail
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      //await updateEmail(user, newEmail);
+      await verifyBeforeUpdateEmail(user, newEmail);
+
+      await updateDoc(doc(db, "users", user.uid), {
+        email: auth.currentUser.email
+      });
+
+      await signOut(auth);
+
+      Alert.alert("Sprawdź skrzynkę pocztową",
+        "Na nowy adres wysłaliśmy link potwierdzający. Kliknij go, aby zakończyć zmianę adresu email."
+      );
+      router.replace("/login");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Błąd", "Nie udało się zmienić emaila.");
+    } finally {
+      setLoading(false);
+      setEmailModalVisible(false);
+    }
+  };
+
+  // Wylogowanie
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/login"); // przeniesienie na ekran logowania
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Błąd", "Nie udało się wylogować.");
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 60, paddingBottom: 40 }}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back-outline" size={28} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.header}>Ustawienia</Text>
+      </View>
+
+      {/* ------------------- ZMIANA IMIENIA ------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Zmiana imienia</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Nowe imię"
+        />
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveName} disabled={loading}>
+          <Text style={styles.saveButtonText}>Zapisz imię</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ====== ZMIANA HASŁA ====== */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Hasło</Text>
+        <TouchableOpacity
+          style={styles.changePasswordButton}
+          onPress={() => setPasswordModalVisible(true)}
+        >
+          <Text style={styles.changePasswordText}>Zmień hasło</Text>
+        </TouchableOpacity>
+      </View>
+      {/* ------------------- ZMIANA EMAILA ------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Email</Text>
+
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={() => setEmailModalVisible(true)}
+        >
+          <Text style={styles.saveButtonText}>Zmień email</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ------------------- WYLOGOWANIE ------------------- */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Ionicons name="log-out-outline" size={22} color="#fff" />
+        <Text style={styles.logoutButtonText}>Wyloguj się</Text>
+      </TouchableOpacity>
+
+      {/* ====== USUNIĘCIE KONTA ====== */}
+      <TouchableOpacity style={styles.deleteButton}>
+        <Text style={styles.deleteButtonText}>Usuń konto</Text>
+      </TouchableOpacity>
+
+
+      {/* ========== MODAL DO ZMIANY EMAILA ========= */}
+      <Modal visible={emailModalVisible} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Zmiana adresu email</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nowy email"
+              value={newEmail}
+              onChangeText={setNewEmail}
+              autoCapitalize="none"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Aktualne hasło"
+              secureTextEntry
+              value={passwordForEmail}
+              onChangeText={setPasswordForEmail}
+            />
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleChangeEmail}>
+              <Text style={styles.saveButtonText}>Zapisz zmiany</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setEmailModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Anuluj</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal zmiany hasła */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={passwordModalVisible}
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <View style={styles.passwordModalOverlay}>
+          <View style={styles.passwordModalBox}>
+            <Text style={styles.passwordModalTitle}>Zmień hasło</Text>
+
+            <TextInput
+              style={styles.passwordInput}
+              secureTextEntry
+              placeholder="Aktualne hasło"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+
+            <TextInput
+              style={styles.passwordInput}
+              secureTextEntry
+              placeholder="Nowe hasło"
+              value={newPassword}
+              onChangeText={setNewPassword}
+            />
+
+            <View style={styles.passwordModalButtons}>
+              <TouchableOpacity
+                style={[styles.passwordModalButton, { backgroundColor: "#ccc" }]}
+                onPress={() => setPasswordModalVisible(false)}
+              >
+                <Text>Anuluj</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.passwordModalButton, { backgroundColor: "#007AFF" }]}
+                onPress={() => {
+                }}
+              >
+                <Text style={styles.passwordModalButtonText}>Zapisz</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    paddingTop: 60,
+    paddingBottom: 80,
+    paddingHorizontal: 20,
+    backgroundColor: "#f5f5f5",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 30,
+    position: "relative",
+  },
+  backButton: {
+    position: "absolute",
+    left: 35,
+    padding: 0,
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionLabel: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  input: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    marginBottom: 10,
+    elevation: 2,
+  },
+  changePasswordText: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#007AFF",
+  },
+  changePasswordButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 15,
+    fontSize: 16,
+  },
+  saveButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  logoutButton: {
+    marginTop: 50,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ff4444",
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  logoutButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    marginLeft: 8,
+    fontWeight: "600",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  passwordModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  passwordModalBox: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    elevation: 5,
+  },
+  passwordModalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 15,
+  },
+  passwordModalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  passwordModalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  passwordModalButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  cancelButton: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: "#999",
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+  },
+  deleteButton: {
+    marginTop: "auto",
+    paddingVertical: 14,
+    backgroundColor: "#ff4444",
+    borderRadius: 8,
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+});

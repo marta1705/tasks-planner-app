@@ -1,19 +1,21 @@
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import React from "react";
 import {
-  Text,
-  TextInput,
-  View,
-  StyleSheet,
-  TouchableOpacity,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase";
+
 
 export default function RegisterScreen() {
   const [name, setName] = React.useState("");
@@ -52,43 +54,56 @@ export default function RegisterScreen() {
     return true;
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setError("");
 
     if (!validateForm()) {
       return;
     }
+    try {
+      // utworzenie użytkownika w Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Dodaj imię do profilu użytkownika
-        return updateProfile(userCredential.user, {
-          displayName: name,
-        });
-      })
-      .then(() => {
-        console.log("User registered with name:", name);
-        router.replace("/");
-      })
-      .catch((error) => {
-        // Obsługa błędów Firebase
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            setError("Ten adres email jest już zarejestrowany");
-            break;
-          case "auth/invalid-email":
-            setError("Nieprawidłowy adres email");
-            break;
-          case "auth/weak-password":
-            setError("Hasło jest zbyt słabe");
-            break;
-          case "auth/network-request-failed":
-            setError("Błąd połączenia z siecią");
-            break;
-          default:
-            setError("Wystąpił błąd: " + error.message);
-        }
+      await updateProfile(user, {
+        displayName: name,
       });
+
+      // utworzenie dokumentu firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: name,
+        email: user.email,
+        createdAt: new Date(), // data dolaczenia
+
+      });
+
+      console.log("User registered with name:", name);
+      router.replace("/");
+
+    } catch (error) {
+      console.error("Błąd rejestracji:", error.code, error.message);
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          setError("Ten adres email jest już zarejestrowany");
+          break;
+        case "auth/invalid-email":
+          setError("Nieprawidłowy adres email");
+          break;
+        case "auth/weak-password":
+          setError("Hasło jest zbyt słabe");
+          break;
+        case "auth/network-request-failed":
+          setError("Błąd połączenia z siecią");
+          break;
+        default:
+          setError("Wystąpił błąd: " + error.message);
+      }
+    };
   };
 
   return (
