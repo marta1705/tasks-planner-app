@@ -1,17 +1,17 @@
-import React, { useState } from "react";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   Image,
-  TouchableOpacity,
-  TextInput,
-  Modal,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { usePet } from "../context/PetContext";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function PetWidget() {
   const {
@@ -35,8 +35,11 @@ export default function PetWidget() {
   };
 
   const petOptions = [
-    { id: 1, name: "Pies", image: require("../assets/images/dog.png") },
-    { id: 2, name: "Kot", image: require("../assets/images/cat.png") },
+    { id: 1, name: "Piesek", image: require("../assets/images/dog/starting_position/dog_starting_position.png") },
+    { id: 2, name: "Kotek", image: require("../assets/images/cat/starting_position/cat_starting_position.png") },
+    { id: 3, name: "Kapibara", image: require("../assets/images/capybara/starting_position/capybara_starting_position.png") },
+    { id: 4, name: "Kaczuszka", image: require("../assets/images/duck/starting_position/duck_starting_position.png") },
+    { id: 5, name: "Rybka", image: require("../assets/images/fish/starting_position/fish_starting_position.png") },
   ];
 
   const handleSelectPet = (petOption) => {
