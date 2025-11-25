@@ -30,7 +30,7 @@ export default function PetWidget() {
   const [tempName, setTempName] = useState(petName);
   const [showPetSelector, setShowPetSelector] = useState(false);
 
-  // --- Animacje psa ---
+  // --- Animacje pieska ---
   const dogAnimations = [
     require("../assets/images/dog/starting_position/video1_dog_starting_position.mp4"),
     require("../assets/images/dog/starting_position/video2_dog_starting_position.mp4"),
@@ -46,10 +46,10 @@ export default function PetWidget() {
   useEffect(() => {
     let timer;
     if (animationStep === 0) {
-      // Statyczny obraz - 5 sekund
+      // Statyczny obraz - 3 sekundy
       timer = setTimeout(() => {
-        setAnimationStep(1); // po 5 sekundach start animacji
-      }, 5000);
+        setAnimationStep(1); // po 3 sekundach start animacji
+      }, 3000);
     }
     return () => clearTimeout(timer);
   }, [animationStep]);
@@ -254,6 +254,8 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     marginBottom: 10,
+    backgroundColor: "#fff",
+    borderRadius: 20,
   },
   videoContainer: {
     width: 300,
@@ -261,6 +263,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
   },
   videoFull: {
     ...StyleSheet.absoluteFillObject,
