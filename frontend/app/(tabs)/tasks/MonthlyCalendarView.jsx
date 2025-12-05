@@ -22,8 +22,26 @@ const DAY_COLUMN_WIDTH = screenWidth / 7;
 // Wysokość komórki (np. 1/7 wysokości ekranu - nagłówek)
 const CELL_HEIGHT = Dimensions.get('window').height / 7 - 40; // Uproszczona wysokość
 
-// Funkcja pomocnicza do tworzenia stringa daty w formacie YYYY-MM-DD
-const toDateString = (date) => date.toISOString().split('T')[0];
+// -------------------------------------------------------------------
+// ✅ KLUCZOWA POPRAWKA DATY: Używamy lokalnych komponentów do stringa YYYY-MM-DD
+// To zapobiega błędom UTC przy parsowaniu dat.
+// -------------------------------------------------------------------
+const toDateString = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+// Funkcja, która resetuje czas do północy (dla poprawnego porównywania zakresów)
+const normalizeDate = (dateStr) => {
+    // Działa z YYYY-MM-DD string
+    const [year, month, day] = dateStr.split('-').map(Number);
+    // Używamy konstrukcji (rok, miesiąc - 1, dzień) w LOKALNYM CZASIE
+    const date = new Date(year, month - 1, day); 
+    return date;
+};
+// -------------------------------------------------------------------
 
 // --- KOMPONENT: WIDOK KALENDARZA MIESIĘCZNEGO ---
 
@@ -84,22 +102,18 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
         });
     };
     
-    // --- Mapowanie Zadań (POPRAWIONA LOGIKA DLA ZADAŃ CAŁODNIOWYCH) ---
+    // --- Mapowanie Zadań ---
     const tasksByDate = tasks.reduce((acc, task) => {
-        // Pomijamy zadania, które są już ukończone
+        // Zadania ukończone nie powinny mieć kropki w Kalendarzu (bo to widok przyszłego planowania)
         if (task.isCompleted) return acc;
 
         const startStr = task.startDate;
-        const endStr = task.deadline; // Używamy deadline jako daty końcowej
+        const endStr = task.deadline;
 
         if (task.isAllDay) {
             // Logika dla zadań całodniowych (pojawiają się na każdy dzień w zakresie)
-            const startDate = new Date(startStr);
-            const endDate = new Date(endStr);
-            
-            // Ustawienie obu na początek dnia, aby uniknąć problemów z czasem
-            startDate.setHours(0, 0, 0, 0);
-            endDate.setHours(0, 0, 0, 0);
+            const startDate = normalizeDate(startStr);
+            const endDate = normalizeDate(endStr);
             
             let current = new Date(startDate);
             // Pętla do momentu włącznie z datą deadline
@@ -126,7 +140,9 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
     }, {});
 
 
-    // --- RENDEROWANIE KOMÓRKI DNIA ---
+    // -------------------------------------------------------------------
+    // ✅ Poprawiona logika wyświetlania priorytetów
+    // -------------------------------------------------------------------
     const renderDayCell = (dayInfo) => {
         const day = dayInfo.date;
         const isCurrentMonth = dayInfo.isCurrentMonth;
@@ -137,6 +153,16 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
         const dayTasks = tasksByDate[dateStr] || [];
         
         const isFocusMonth = day && day.getMonth() === currentDate.getMonth();
+
+        // Podział zadań na priorytetowe (Urgent/Medium) i resztę
+        const priorityTasks = dayTasks
+            .filter(task => task.priority === 'urgent' || task.priority === 'medium')
+            .sort((a, b) => (a.priority === 'urgent' ? -1 : 1))
+            .slice(0, 1); // Pokaż tylko JEDNO najbardziej priorytetowe zadanie jako blok
+        
+        const otherTasks = dayTasks.filter(task => 
+            task.priority !== 'urgent' && task.priority !== 'medium'
+        );
 
         return (
             <TouchableOpacity
@@ -149,7 +175,6 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
                 disabled={!isCurrentMonth}
                 onPress={() => {
                     // Nawigacja do widoku agendy/listy zadań dla tego dnia
-                    // Używamy daty z day.toISOString().split('T')[0]
                     if (day) {
                         router.push({ pathname: '/tasks', params: { viewMode: 'agenda', date: dateStr } }); 
                     }
@@ -161,14 +186,29 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
                             {day.getDate()}
                         </Text>
                         
-                        {/* WIZUALIZACJA ZADAŃ */}
+                        {/* NOWY BLOK WIZUALIZACJI: ZADANIE PRIORYTETOWE */}
+                        {priorityTasks.length > 0 && (
+                            <View style={[
+                                styles.priorityTaskBlock,
+                                { 
+                                    backgroundColor: priorityColors[priorityTasks[0].priority] + '30',
+                                    borderColor: priorityColors[priorityTasks[0].priority],
+                                }
+                            ]}>
+                                <Text style={styles.priorityTaskText} numberOfLines={1}>
+                                    {priorityTasks[0].icon} {priorityTasks[0].name}
+                                </Text>
+                            </View>
+                        )}
+                        
+                        {/* WIZUALIZACJA ZADAŃ NISKIEGO PRIORYTETU (kropki) */}
                         <View style={styles.taskDotsContainer}>
-                            {dayTasks
-                                .sort((a, b) => (a.priority === 'urgent' ? -1 : 1)) // Najwyższy priorytet na początku
+                            {otherTasks
+                                .sort((a, b) => (a.priority === 'low' ? -1 : 1)) // Sortowanie reszty
                                 .slice(0, 3) // Pokaż tylko 3 kropki
                                 .map((task, index) => (
                                     <View
-                                        key={`${task.id}-${index}`} // Użyj unikalnego klucza
+                                        key={`${task.id}-${index}`} 
                                         style={[
                                             styles.taskDot,
                                             { backgroundColor: priorityColors[task.priority] || '#ccc' }
@@ -177,15 +217,16 @@ const MonthlyCalendarViewComponent = ({ tasks, router, priorityColors }) => {
                                 ))}
                         </View>
                         
-                        {/* Wskaźnik "Więcej zadań" */}
-                        {dayTasks.length > 3 && (
-                            <Text style={styles.moreTasks}>+{dayTasks.length - 3}</Text>
+                        {/* Wskaźnik "Więcej zadań" - Poprawiona logika liczenia */}
+                        {dayTasks.length > priorityTasks.length + otherTasks.length && (
+                            <Text style={styles.moreTasks}>+{dayTasks.length - priorityTasks.length - otherTasks.length}</Text>
                         )}
                     </>
                 )}
             </TouchableOpacity>
         );
     };
+    // -------------------------------------------------------------------
 
 
     return (
@@ -317,6 +358,24 @@ const styles = StyleSheet.create({
     otherMonthText: {
         color: '#bbb', // Dni z poprzedniego/następnego miesiąca
     },
+    // -------------------------------------------------------------------
+    // ✅ STYLE DLA BLOKU ZADANIA PRIORYTETOWEGO
+    // -------------------------------------------------------------------
+    priorityTaskBlock: {
+        borderRadius: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        marginBottom: 4,
+        marginTop: 2,
+        borderLeftWidth: 3,
+        alignSelf: 'stretch', // Rozciągnij na całą szerokość komórki
+    },
+    priorityTaskText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#333', // Kolor tekstu jest stały, dla lepszej czytelności
+    },
+    // -------------------------------------------------------------------
     taskDotsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',

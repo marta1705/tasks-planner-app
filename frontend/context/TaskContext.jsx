@@ -150,8 +150,14 @@ export function TaskProvider({ children }) {
         const taskDocRef = doc(db, "tasks", userId, "userTasks", updatedTask.id);
         const { id, ...dataToUpdate } = updatedTask; 
         await updateDoc(taskDocRef, dataToUpdate);
+        
+        // 🚩 DODANY LOG SUKCESU
+        console.log(`[FIREBASE] Pomyślnie zaktualizowano zadanie: ${updatedTask.id}`); 
+        
     } catch (e) {
         console.error("Błąd aktualizacji Firebase: ", e);
+        // Logowanie BŁĘDU
+        console.error(`[FIREBASE ERROR] Nie udało się zaktualizować zadania: ${updatedTask.id}`); 
         Alert.alert("Błąd Aktualizacji", "Nie udało się zapisać zmian w chmurze.");
     }
   };
@@ -173,6 +179,8 @@ export function TaskProvider({ children }) {
   
   // --- OZNACZANIE JAKO UKOŃCZONE (używa updateTask) ---
   const completeTask = (taskId) => {
+    // 🚩 DODANY LOG STARTU
+    console.log(`[TASK ACTION] Uruchomiono completeTask dla ID: ${taskId}`); 
     // ... (Logika punktów i statusu bez zmian) ...
     setTasks((prevTasks) =>
       prevTasks.map((task) => {
@@ -200,6 +208,8 @@ export function TaskProvider({ children }) {
           const updatedFields = {
             isCompleted: newCompleted,
             completedAt: newCompleted ? new Date().toISOString() : null,
+            // 🚩 NOWA FLAGA SPRAWDZAJĄCA, CZY ZROBIONE PRZED DEADLINE
+            wasOnTime: newCompleted ? isOnTime : false, 
           };
           
           if (task.id) {

@@ -3,10 +3,11 @@ import * as Calendar from 'expo-calendar';
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+    ActionSheetIOS, // ✅ WAŻNE
     Alert,
     Platform,
     ScrollView,
-    StyleSheet, // <--- 🚨 DODANE StyleSheet
+    StyleSheet,
     Switch,
     Text,
     TextInput,
@@ -43,6 +44,18 @@ const combineDateTime = (dateString, timeString) => {
     const date = new Date(year, month - 1, day, hour, minute);
     return date;
 };
+
+// -----------------------------------------------------
+// STAŁE DLA OPCJI POWTARZANIA
+const RECURRENCE_OPTIONS = [
+    { label: 'Nigdy', value: 'none' },
+    { label: 'Codziennie', value: 'daily' },
+    { label: 'Co tydzień', value: 'weekly' },
+    { label: 'Co miesiąc', value: 'monthly' },
+    { label: 'Co roku', value: 'yearly' },
+    { label: 'Własne...', value: 'custom' },
+];
+// -----------------------------------------------------
 
 // -------------------------------------------------------------------
 // NOWA FUNKCJA POMOCNICZA: DODAJ ZDARZENIE DO KALENDARZA
@@ -164,7 +177,10 @@ export default function AddTaskScreen() {
 
     // --- STANY DANYCH OPCJONALNYCH/KALENDARZA ---
     const [isAllDay, setIsAllDay] = useState(false);
-    const [isRecurring, setIsRecurring] = useState(false); 
+    
+    // ZMIANA: ZMIENIAMY isRecurring NA recurrenceRule
+    const [recurrenceRule, setRecurrenceRule] = useState('none'); 
+    
     const [reminderTime, setReminderTime] = useState('Godzina wydarzenia'); 
     const [saveToCalendar, setSaveToCalendar] = useState(false);
     const [isSaving, setIsSaving] = useState(false); // STAN ŁADOWANIA
@@ -173,9 +189,71 @@ export default function AddTaskScreen() {
     const [tagInput, setTagInput] = useState('');
     const [taskTags, setTaskTags] = useState([]);
 
+    // --- STAN DLA CUSTOM DATEPICKER (jeśli wybrano "Własne...") ---
+    const [showCustomRecurrencePicker, setShowCustomRecurrencePicker] = useState(false);
+    const [customRecurrenceEndDate, setCustomRecurrenceEndDate] = useState(todayDateString);
+
+
+    // --- NOWA FUNKCJA: OBSŁUGA MODALU POWTARZANIA ---
+    const handleRecurrenceDateChange = (event, selectedDate) => {
+        setShowCustomRecurrencePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            setCustomRecurrenceEndDate(toLocalISOString(selectedDate));
+            setRecurrenceRule(`custom:${toLocalISOString(selectedDate)}`);
+            Alert.alert("Powtarzanie Własne", `Ustawiono powtarzanie do: ${toLocalISOString(selectedDate)}.`);
+        }
+    };
+
+    const handleSetRecurrence = (ruleValue) => {
+        if (ruleValue === 'custom') {
+            if (Platform.OS === 'web') {
+                 Alert.alert("Błąd", "Wybór daty końcowej dla powtarzania 'Własne' nie jest w pełni wspierany w widoku Web.");
+            } else {
+                 // Otwórz DateTimePicker, aby użytkownik wybrał datę końcową powtarzania
+                setShowCustomRecurrencePicker(true);
+            }
+            return;
+        }
+        setRecurrenceRule(ruleValue);
+    };
+
+    const showRecurrenceOptions = () => {
+        const options = RECURRENCE_OPTIONS.map(o => o.label);
+        
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: options,
+                    cancelButtonIndex: 0, // "Nigdy" jest pierwsze w RECURRENCE_OPTIONS
+                    title: "Ustaw Powtarzanie Zadania",
+                },
+                (buttonIndex) => {
+                    if (buttonIndex !== undefined) {
+                        const selectedValue = RECURRENCE_OPTIONS[buttonIndex].value;
+                        handleSetRecurrence(selectedValue);
+                    }
+                }
+            );
+        } else {
+             // STRUKTURA ALERTU DLA ANDROIDA/WEB
+             const alertOptions = RECURRENCE_OPTIONS.map(option => ({
+                text: option.label,
+                onPress: () => handleSetRecurrence(option.value),
+                style: option.value === 'none' ? 'cancel' : 'default' 
+             }));
+             
+             Alert.alert(
+                "Ustaw Powtarzanie",
+                "Wybierz regułę cykliczności:",
+                alertOptions
+            );
+        }
+    };
+    // -----------------------------------------------------
+
 
     // --- FUNKCJA GŁÓWNA: DODAJ ZADANIE ---
-    const handleAddTask = async () => { // MUSI BYĆ ASYNCHRONICZNA
+    const handleAddTask = async () => { 
         if (!name.trim()) {
             Alert.alert("Błąd", "Nazwa zadania jest wymagana.");
             return;
@@ -205,7 +283,11 @@ export default function AddTaskScreen() {
                 endTime: endTime, 
                 startDate: startDate, 
                 isAllDay: isAllDay,
-                isRecurring: isRecurring,
+                
+                // ZMIANA: ZAPISUJEMY recurrenceRule
+                isRecurring: recurrenceRule !== 'none' && !recurrenceRule.startsWith('custom:'), // flaga dla wstecznej kompatybilności
+                recurrenceRule: recurrenceRule, // NOWA zasada powtarzania
+                
                 reminderTime: reminderTime, 
                 calendarEventId: null, 
                 saveToCalendar: saveToCalendar, 
@@ -223,7 +305,6 @@ export default function AddTaskScreen() {
             // 4. ZAPIS DO FIREBASE (Czekamy na zakończenie)
             await addTask(newTask); 
             
-            // 🚩 ROZWIĄZANIE PROBLEMU: Przekierowanie PO udanym asynchronicznym zapisie
             router.replace('/tasks'); 
 
         } catch (e) {
@@ -385,10 +466,12 @@ export default function AddTaskScreen() {
                     />
                 </View>
                 
-                {/* --- OPCJA: POWTÓRZ (Symulacja, wymaga rozszerzenia logiki) --- */}
-                <TouchableOpacity style={styles.calendarOptionRow} onPress={() => setIsRecurring(prev => !prev)}>
+                {/* --- ZMIANA: OPCJA POWTÓRZ (Teraz otwiera modal) --- */}
+                <TouchableOpacity style={styles.calendarOptionRow} onPress={showRecurrenceOptions}>
                     <Text style={styles.calendarOptionText}>Powtórz</Text>
-                    <Text style={styles.calendarOptionValue}>{isRecurring ? 'Tak' : 'Brak'}</Text>
+                    <Text style={styles.calendarOptionValue}>
+                        {RECURRENCE_OPTIONS.find(r => r.value === recurrenceRule.split(':')[0])?.label || `Własne (${recurrenceRule.split(':')[1] || 'Brak daty'})`}
+                    </Text>
                 </TouchableOpacity>
                 
                 {/* --- OPCJA: POWIADOMIENIE (Symulacja, wymaga rozszerzenia logiki) --- */}
@@ -509,6 +592,17 @@ export default function AddTaskScreen() {
                     mode="date"
                     display={Platform.OS === "ios" ? "spinner" : "default"}
                     onChange={handleDateChange}
+                    minimumDate={today}
+                />
+            )}
+            
+            {/* ZMIANA: CUSTOM DATE PICKER DLA POWTARZANIA */}
+             {showCustomRecurrencePicker && Platform.OS !== "web" && (
+                <DateTimePicker
+                    value={combineDateTime(customRecurrenceEndDate, '12:00')}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={handleRecurrenceDateChange}
                     minimumDate={today}
                 />
             )}
