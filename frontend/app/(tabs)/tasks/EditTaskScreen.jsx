@@ -1,12 +1,12 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Calendar from 'expo-calendar';
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
     Alert,
     Platform,
     ScrollView,
-    StyleSheet, // <--- 🚨 DODANE StyleSheet
+    StyleSheet,
     Switch,
     Text,
     TextInput,
@@ -19,20 +19,13 @@ import { PRIORITY_OPTIONS, TASK_ICONS, useTasks } from "../../../context/TaskCon
 // Data do walidacji w DatePickerze
 const today = new Date();
 today.setHours(0, 0, 0, 0);
-
-// POPRAWKA: BEZPIECZNA LOKALNA DATA (YYYY-MM-DD)
+// POPRAWKA: Generowanie lokalnej daty w formacie YYYY-MM-DD
 const pad = (num) => (num < 10 ? '0' + num : num);
 const year = today.getFullYear();
 const month = pad(today.getMonth() + 1);
 const day = pad(today.getDate());
 const todayDateString = `${year}-${month}-${day}`;
-// Funkcja do konwersji daty na lokalny format ISO (YYYY-MM-DD)
-const toLocalISOString = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-};
+// KONIEC POPRAWKI
 
 
 // Funkcja pomocnicza do łączenia daty i czasu w obiekt Date do walidacji i Kalendarza
@@ -44,8 +37,73 @@ const combineDateTime = (dateString, timeString) => {
     return date;
 };
 
+
 // -------------------------------------------------------------------
-// NOWA FUNKCJA POMOCNICZA: DODAJ ZDARZENIE DO KALENDARZA
+// FUNKCJA POMOCNICZA: USUŃ ZDARZENIE Z KALENDARZA
+// -------------------------------------------------------------------
+const deleteEventFromCalendar = async (calendarEventId) => {
+    if (!calendarEventId) return;
+
+    const { status: calendarStatus } = await Calendar.requestCalendarPermissionsAsync();
+    
+    if (calendarStatus !== 'granted') {
+        console.log("Brak uprawnień do kalendarza, nie można usunąć wydarzenia.");
+        return;
+    }
+
+    try {
+        await Calendar.deleteEventAsync(calendarEventId);
+        console.log("Event deleted with ID: ", calendarEventId);
+    } catch (error) {
+        console.error("Calendar deletion error: ", error);
+        Alert.alert("Błąd Usuwania", "Nie udało się usunąć wydarzenia z Kalendarza Google.");
+    }
+};
+
+// -------------------------------------------------------------------
+// FUNKCJA POMOCNICZA: AKTUALIZUJ ZDARZENIE W KALENDARZU
+// -------------------------------------------------------------------
+const updateEventInCalendar = async (task) => {
+    if (!task.calendarEventId) return null;
+    
+    const { status: calendarStatus } = await Calendar.requestCalendarPermissionsAsync();
+    
+    if (calendarStatus !== 'granted') {
+        console.log("Brak uprawnień do kalendarza, nie można zaktualizować wydarzenia.");
+        return task.calendarEventId;
+    }
+    
+    const startDateObj = combineDateTime(task.startDate, task.startTime);
+    const endDateObj = combineDateTime(task.deadline, task.endTime);
+    
+    if (!startDateObj || !endDateObj) {
+        Alert.alert("Błąd Daty", "Nie można przetworzyć daty/czasu na wydarzenie w kalendarzu.");
+        return task.calendarEventId;
+    }
+    
+    const eventDetails = {
+        title: task.name,
+        startDate: startDateObj,
+        endDate: endDateObj,
+        allDay: task.isAllDay,
+        notes: task.description || 'Zaktualizowano z aplikacji do zarządzania zadaniami.',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        alarms: task.isAllDay ? [] : [{ relativeOffset: -10, method: Calendar.AlarmMethod.DEFAULT }],
+    };
+
+    try {
+        await Calendar.updateEventAsync(task.calendarEventId, eventDetails);
+        console.log("Event updated with ID: ", task.calendarEventId);
+        return task.calendarEventId;
+    } catch (error) {
+        console.error("Calendar update error: ", error);
+        Alert.alert("Błąd Aktualizacji", "Nie udało się zaktualizować wydarzenia w Kalendarzu Google.");
+        return task.calendarEventId;
+    }
+};
+
+// -------------------------------------------------------------------
+// FUNKCJA POMOCNICZA: TWORZENIE ZDARZENIA (potrzebne do edycji, jeśli user włączy opcję)
 // -------------------------------------------------------------------
 const createEventInCalendar = async (task) => {
     const { status: calendarStatus } = await Calendar.requestCalendarPermissionsAsync();
@@ -97,6 +155,7 @@ const createEventInCalendar = async (task) => {
 };
 // -------------------------------------------------------------------
 
+
 // KOMPONENT: TimePicker (dla wyboru godziny)
 const TimePicker = ({ time, setTime, disabled }) => {
     const [showPicker, setShowPicker] = useState(false);
@@ -108,9 +167,10 @@ const TimePicker = ({ time, setTime, disabled }) => {
             setTime(newTime);
         }
     };
-
-    const dateForPicker = combineDateTime(todayDateString, time) || new Date();
     
+    // Tworzenie obiektu Date do przekazania do DateTimePicker
+    const dateForPicker = combineDateTime(todayDateString, time) || new Date();
+
     if (Platform.OS === 'web') {
         return (
             <TextInput
@@ -124,7 +184,7 @@ const TimePicker = ({ time, setTime, disabled }) => {
             />
         );
     }
-    
+
     return (
         <TouchableOpacity 
             onPress={() => !disabled && setShowPicker(true)} 
@@ -146,97 +206,44 @@ const TimePicker = ({ time, setTime, disabled }) => {
 };
 
 
-export default function AddTaskScreen() {
+export default function EditTaskScreen() {
     const router = useRouter();
-    const { addTask } = useTasks();
-    
-    const { tags: allTags = [], addTag: addNewTag } = useTags(); 
+    const params = useLocalSearchParams();
+    const { taskId } = params;
+    const { tasks, updateTask, deleteTask } = useTasks();
+    const { tags: allTags = [], addTag: addNewTag } = useTags();
 
-    // --- STANY DANYCH PODSTAWOWYCH ---
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [startDate, setStartDate] = useState(todayDateString); 
-    const [startTime, setStartTime] = useState('09:00');
-    const [endDate, setEndDate] = useState(todayDateString); 
-    const [endTime, setEndTime] = useState('10:00');
-    const [selectedPriority, setSelectedPriority] = useState(PRIORITY_OPTIONS[0].value); 
-    const [selectedIcon, setSelectedIcon] = useState(TASK_ICONS[0].icon); 
+    const initialTask = tasks.find(task => task.id === taskId);
 
-    // --- STANY DANYCH OPCJONALNYCH/KALENDARZA ---
-    const [isAllDay, setIsAllDay] = useState(false);
-    const [isRecurring, setIsRecurring] = useState(false); 
-    const [reminderTime, setReminderTime] = useState('Godzina wydarzenia'); 
-    const [saveToCalendar, setSaveToCalendar] = useState(false);
-    const [isSaving, setIsSaving] = useState(false); // STAN ŁADOWANIA
-    
-    // --- STANY DLA TAGÓW ---
+    // Jeśli zadanie nie istnieje, wracamy
+    useEffect(() => {
+        if (!initialTask) {
+            Alert.alert("Błąd", "Nie znaleziono zadania do edycji.");
+            router.replace('/tasks');
+        }
+    }, [initialTask, router]);
+
+
+    // --- STANY ---
+    const [name, setName] = useState(initialTask?.name || '');
+    const [description, setDescription] = useState(initialTask?.description || '');
+    const [startDate, setStartDate] = useState(initialTask?.startDate || todayDateString); 
+    const [startTime, setStartTime] = useState(initialTask?.startTime || '09:00');
+    const [endDate, setEndDate] = useState(initialTask?.deadline || todayDateString); 
+    const [endTime, setEndTime] = useState(initialTask?.endTime || '10:00');
+    const [selectedPriority, setSelectedPriority] = useState(initialTask?.priority || PRIORITY_OPTIONS[0].value); 
+    const [selectedIcon, setSelectedIcon] = useState(initialTask?.icon || TASK_ICONS[0].icon); 
+    const [taskTags, setTaskTags] = useState(initialTask?.hashtags || []);
     const [tagInput, setTagInput] = useState('');
-    const [taskTags, setTaskTags] = useState([]);
+    
+    // Opcje kalendarza z AddTaskScreen.jsx, które mogły być dodane
+    const [isAllDay, setIsAllDay] = useState(initialTask?.isAllDay || false);
+    const [isRecurring, setIsRecurring] = useState(initialTask?.isRecurring || false);
+    const [reminderTime, setReminderTime] = useState(initialTask?.reminderTime || 'Godzina wydarzenia');
+    const [saveToCalendar, setSaveToCalendar] = useState(initialTask?.saveToCalendar || false);
+    // Jeśli zadanie ma ID kalendarza, zawsze uznajemy opcję za aktywną
+    const [calendarEventId, setCalendarEventId] = useState(initialTask?.calendarEventId || null);
 
-
-    // --- FUNKCJA GŁÓWNA: DODAJ ZADANIE ---
-    const handleAddTask = async () => { // MUSI BYĆ ASYNCHRONICZNA
-        if (!name.trim()) {
-            Alert.alert("Błąd", "Nazwa zadania jest wymagana.");
-            return;
-        }
-        
-        // 1. Walidacja daty i czasu
-        const startDateTime = combineDateTime(startDate, startTime);
-        const endDateTime = combineDateTime(endDate, endTime);
-
-        if (!isAllDay && (endDateTime <= startDateTime)) {
-            Alert.alert("Błąd Czasu", "Czas zakończenia musi być późniejszy niż czas rozpoczęcia (chyba że to wydarzenie całodniowe).");
-            return;
-        }
-
-        setIsSaving(true); 
-
-        try {
-            // 2. Tworzenie obiektu zadania
-            const newTask = {
-                name: name.trim(),
-                description: description.trim(),
-                deadline: endDate, 
-                hashtags: taskTags,
-                icon: selectedIcon, 
-                priority: selectedPriority, 
-                startTime: startTime, 
-                endTime: endTime, 
-                startDate: startDate, 
-                isAllDay: isAllDay,
-                isRecurring: isRecurring,
-                reminderTime: reminderTime, 
-                calendarEventId: null, 
-                saveToCalendar: saveToCalendar, 
-            };
-
-            // 3. LOGIKA INTEGRACJI Z KALENDARZEM GOOGLE
-            if (saveToCalendar) {
-                const eventId = await createEventInCalendar(newTask);
-                if (eventId) {
-                    newTask.calendarEventId = eventId;
-                    console.log("Wydarzenie zapisano w Kalendarzu Google.");
-                }
-            }
-
-            // 4. ZAPIS DO FIREBASE (Czekamy na zakończenie)
-            await addTask(newTask); 
-            
-            // 🚩 ROZWIĄZANIE PROBLEMU: Przekierowanie PO udanym asynchronicznym zapisie
-            router.replace('/tasks'); 
-
-        } catch (e) {
-            console.error("Critical AddTask Error:", e);
-            if (e.name === 'AuthError') {
-                 Alert.alert("Błąd logowania", "Nie jesteś zalogowany lub baza danych jest niegotowa. Spróbuj się przelogować.");
-            } else {
-                 Alert.alert("Błąd zapisu", "Wystąpił krytyczny błąd zapisu zadania w chmurze. Sprawdź reguły bezpieczeństwa Firebase!");
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     // --- FUNKCJE OBSŁUGI ZMIANY DATY I CZASU ---
     const handleIsAllDayChange = (newValue) => {
@@ -249,14 +256,14 @@ export default function AddTaskScreen() {
             setEndTime('10:00');
         }
     };
-    
+
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerTarget, setDatePickerTarget] = useState('start');
 
     const handleDateChange = (event, date) => {
         setShowDatePicker(Platform.OS === 'ios');
         if (date) {
-            const newDateString = toLocalISOString(date); 
+            const newDateString = date.toISOString().split("T")[0];
             
             if (datePickerTarget === 'start') {
                 setStartDate(newDateString);
@@ -288,6 +295,104 @@ export default function AddTaskScreen() {
         return `${day}.${month}.${year}`;
     };
 
+    // --- LOGIKA EDYCJI ---
+    const handleUpdateTask = async () => { 
+        if (!name.trim()) {
+            Alert.alert("Błąd", "Nazwa zadania jest wymagana.");
+            return;
+        }
+
+        const startDateTime = combineDateTime(startDate, startTime);
+        const endDateTime = combineDateTime(endDate, endTime);
+
+        if (!isAllDay && (endDateTime <= startDateTime)) {
+            Alert.alert("Błąd Czasu", "Czas zakończenia musi być późniejszy niż czas rozpoczęcia (chyba że to wydarzenie całodniowe).");
+            return;
+        }
+
+        let currentCalendarEventId = calendarEventId;
+    
+        // --- LOGIKA AKTUALIZACJI/TWORZENIA/USUWANIA W KALENDARZU ---
+        const taskPayload = {
+            id: taskId,
+            name: name.trim(),
+            description: description.trim(),
+            deadline: endDate,
+            startDate: startDate,
+            startTime: startTime,
+            endTime: endTime,
+            isAllDay: isAllDay,
+        };
+        
+        if (saveToCalendar) {
+            if (currentCalendarEventId) {
+                // SCENARIUSZ 1: Aktualizuj istniejące
+                const updatedId = await updateEventInCalendar({ ...taskPayload, calendarEventId: currentCalendarEventId });
+                currentCalendarEventId = updatedId;
+            } else {
+                // SCENARIUSZ 2: Utwórz nowe
+                const newEventId = await createEventInCalendar(taskPayload);
+                currentCalendarEventId = newEventId;
+            }
+        } else if (currentCalendarEventId) {
+            // SCENARIUSZ 3: Usuń z kalendarza i wyczyść ID
+            await deleteEventFromCalendar(currentCalendarEventId);
+            currentCalendarEventId = null; 
+            Alert.alert("Informacja", "Wydarzenie usunięto z Kalendarza Google.");
+        }
+        // -------------------------------------------------------------
+
+        const updatedTask = {
+            id: taskId, // Pamiętaj o ID!
+            name: name.trim(),
+            description: description.trim(),
+            deadline: endDate,
+            hashtags: taskTags,
+            icon: selectedIcon,
+            priority: selectedPriority,
+            startTime: startTime,
+            endTime: endTime,
+            startDate: startDate,
+            
+            // Pola Kalendarza
+            isAllDay: isAllDay,
+            isRecurring: isRecurring,
+            reminderTime: reminderTime, 
+            saveToCalendar: saveToCalendar,
+            calendarEventId: currentCalendarEventId, // Używamy zaktualizowanej wartości
+        };
+        
+        updateTask(updatedTask);
+        router.replace('/tasks'); 
+    };
+
+    // --- LOGIKA USUWANIA ---
+    const handleDeleteTask = () => {
+        Alert.alert(
+            "Usuń Zadanie",
+            "Czy na pewno chcesz usunąć to zadanie? Usunięcie jest nieodwracalne.",
+            [
+                {
+                    text: "Anuluj",
+                    style: "cancel"
+                },
+                { 
+                    text: "Usuń", 
+                    style: "destructive", 
+                    onPress: async () => { 
+                        
+                        // TUTAJ Wymagana logika: delete event z Calendar
+                        await deleteEventFromCalendar(calendarEventId);
+
+                        deleteTask(taskId);
+                        router.replace('/tasks');
+                    }
+                }
+            ]
+        );
+    };
+
+
     // --- FUNKCJE DLA TAGÓW ---
     const handleAddTag = () => {
         if (tagInput.trim() && !taskTags.includes(tagInput.trim())) {
@@ -307,6 +412,10 @@ export default function AddTaskScreen() {
             setTaskTags([...taskTags, tag]);
         }
     };
+
+    if (!initialTask) {
+        return <View style={styles.container}><Text style={styles.sectionTitle}>Ładowanie...</Text></View>;
+    }
 
 
     return (
@@ -391,13 +500,7 @@ export default function AddTaskScreen() {
                     <Text style={styles.calendarOptionValue}>{isRecurring ? 'Tak' : 'Brak'}</Text>
                 </TouchableOpacity>
                 
-                {/* --- OPCJA: POWIADOMIENIE (Symulacja, wymaga rozszerzenia logiki) --- */}
-                 <TouchableOpacity style={styles.calendarOptionRow} onPress={() => Alert.alert('Powiadomienie', 'Wybór czasu powiadomienia')}>
-                    <Text style={styles.calendarOptionText}>Powiadomienie</Text>
-                    <Text style={styles.calendarOptionValue}>{reminderTime}</Text>
-                 </TouchableOpacity>
-
-                {/* --- OPCJA: ZAPISZ W KALENDARZU GOOGLE (Kluczowa integracja) --- */}
+                {/* --- OPCJA: ZAPISZ W KALENDARZU GOOGLE --- */}
                 <View style={[styles.calendarOptionRow, { borderBottomWidth: 0 }]}>
                     <Text style={styles.calendarOptionText}>Zapisz w Kalendarzu Google</Text>
                     <Switch
@@ -483,7 +586,7 @@ export default function AddTaskScreen() {
                     ))}
                 </View>
                 
-                {/* --- ISTNIEJĄCE TAGI (Zabezpieczone przed błędem undefined) --- */}
+                {/* --- ISTNIEJĄCE TAGI --- */}
                 {allTags.length > 0 && (
                     <View>
                         <Text style={[styles.label, { marginTop: 15, marginBottom: 5 }]}>Sugerowane Tagi:</Text>
@@ -516,12 +619,13 @@ export default function AddTaskScreen() {
             {/* -------------------------------------------------------------------------------------- */}
 
             {/* --- PRZYCISK ZAPISZ --- */}
-            <TouchableOpacity 
-                style={[styles.saveButton, isSaving && { opacity: 0.7 }]} 
-                onPress={handleAddTask}
-                disabled={isSaving} // Blokowanie podczas zapisu
-            >
-                <Text style={styles.saveButtonText}>{isSaving ? "Zapisywanie..." : "Zapisz Zadanie"}</Text>
+            <TouchableOpacity style={styles.saveButton} onPress={handleUpdateTask}>
+                <Text style={styles.saveButtonText}>Zapisz Zmiany</Text>
+            </TouchableOpacity>
+
+            {/* --- PRZYCISK USUŃ --- */}
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteTask}>
+                <Text style={styles.deleteButtonText}>Usuń Zadanie</Text>
             </TouchableOpacity>
 
             <View style={{ height: 50 }} />
@@ -650,8 +754,8 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 8,
         marginHorizontal: 4,
-        opacity: 0.6,
         alignItems: "center",
+        opacity: 0.6,
         ...Platform.select({
             default: { // Poprawka dla Web
                 boxShadow: '0 1px 1px rgba(0, 0, 0, 0.1)',
@@ -736,9 +840,26 @@ const styles = StyleSheet.create({
     suggestedTagText: {
         color: '#007AFF',
     },
-    // --- Zapisz ---
+    // --- Przyciski Zapisz/Usuń ---
     saveButton: {
         backgroundColor: "#007AFF",
+        padding: 15,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 20,
+        ...Platform.select({
+            default: { // Poprawka dla Web
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            },
+        }),
+    },
+    saveButtonText: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    deleteButton: {
+        backgroundColor: "#FF3B30",
         padding: 15,
         borderRadius: 12,
         alignItems: "center",
@@ -749,7 +870,7 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    saveButtonText: {
+    deleteButtonText: {
         color: "#fff",
         fontSize: 18,
         fontWeight: "bold",
