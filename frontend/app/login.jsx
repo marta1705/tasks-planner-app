@@ -2,15 +2,14 @@ import { useRouter } from "expo-router";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import React from "react";
 import {
-  Text,
-  TextInput,
-  View,
-  StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 export default function LoginScreen() {
@@ -21,35 +20,27 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const validateForm = () => {
-    // Sprawdź format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Nieprawidłowy adres email");
       return false;
     }
-
-    // Sprawdź czy hasło jest wypełnione
     if (!password) {
       setError("Proszę podać hasło");
       return false;
     }
-
     return true;
   };
 
   const handleLogin = () => {
     setError("");
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         console.log("User logged in:", userCredential.user.email);
       })
       .catch((error) => {
-        // Obsługa błędów Firebase
         switch (error.code) {
           case "auth/invalid-email":
             setError("Nieprawidłowy adres email");
@@ -80,11 +71,14 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled" // klucz dla desktop/web
+      >
+        <View>
           <Text style={styles.title}>Witaj</Text>
 
           {error ? (
@@ -141,10 +135,11 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -152,9 +147,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   title: {
     fontSize: 32,
@@ -163,7 +159,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
   },
-
   errorContainer: {
     backgroundColor: "#ffe6e6",
     borderLeftWidth: 4,
