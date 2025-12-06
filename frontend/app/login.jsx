@@ -39,6 +39,8 @@ export default function LoginScreen() {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         console.log("User logged in:", userCredential.user.email);
+        // POPRAWKA: przekierowanie na root '/', a nie /(tabs)/index
+        router.replace("/");
       })
       .catch((error) => {
         switch (error.code) {
@@ -76,7 +78,7 @@ export default function LoginScreen() {
     >
       <ScrollView
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled" // klucz dla desktop/web
+        keyboardShouldPersistTaps="handled"
       >
         <View>
           <Text style={styles.title}>Witaj</Text>
@@ -140,100 +142,20 @@ export default function LoginScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 30,
-    textAlign: "center",
-  },
-  errorContainer: {
-    backgroundColor: "#ffe6e6",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ff4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: "#cc0000",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  primaryButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 30,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#e0e0e0",
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: "#999",
-    fontSize: 14,
-  },
-  secondaryButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    backgroundColor: "transparent",
-  },
-  secondaryButtonText: {
-    color: "#007AFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
+  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  content: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 40 },
+  title: { fontSize: 32, fontWeight: "bold", color: "#333", marginBottom: 30, textAlign: "center" },
+  errorContainer: { backgroundColor: "#ffe6e6", borderLeftWidth: 4, borderLeftColor: "#ff4444", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, marginBottom: 20 },
+  errorText: { color: "#cc0000", fontSize: 14, fontWeight: "500" },
+  inputContainer: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 8 },
+  input: { backgroundColor: "#fff", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, fontSize: 16, borderWidth: 1, borderColor: "#e0e0e0" },
+  primaryButton: { backgroundColor: "#007AFF", paddingVertical: 16, borderRadius: 12, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "center" },
+  divider: { flexDirection: "row", alignItems: "center", marginVertical: 30 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#e0e0e0" },
+  dividerText: { marginHorizontal: 16, color: "#999", fontSize: 14 },
+  secondaryButton: { paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: "#007AFF", backgroundColor: "transparent" },
+  secondaryButtonText: { color: "#007AFF", fontSize: 16, fontWeight: "600", textAlign: "center" },
 });
