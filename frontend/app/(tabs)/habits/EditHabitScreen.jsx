@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { useState, useEffect } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -11,8 +11,8 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Alert,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -22,7 +22,8 @@ import ColorPicker, { HueSlider, Preview } from "reanimated-color-picker";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
-export default function AddHabitScreen() {
+export default function EditHabitScreen() {
+  const { id } = useLocalSearchParams();
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [date, setDate] = useState(new Date());
@@ -33,12 +34,13 @@ export default function AddHabitScreen() {
   const [selectedColor, setSelectedColor] = useState("#007AFF");
   const [selectedIcon, setSelectedIcon] = useState("💪");
   const [newTag, setNewTag] = useState("");
+  const [existingNotificationId, setExistingNotificationId] = useState(null);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState(new Date());
   const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
 
   const router = useRouter();
-  const { addHabit } = useHabits();
+  const { habits, editHabit } = useHabits();
   const { tags, addTag } = useTags();
 
   const icons = [
@@ -55,6 +57,33 @@ export default function AddHabitScreen() {
     "🦵",
     "🧠",
   ];
+
+  useEffect(() => {
+    const habit = habits.find((h) => h.id === id);
+    if (habit) {
+      setName(habit.name);
+      setStartDate(habit.startDate);
+      setDate(new Date(habit.startDate));
+      setSelectedTags(habit.hashtags || []);
+      setFrequency(habit.frequency);
+      setCustomDays(habit.customDays || []);
+      setSelectedColor(habit.color || "#007AFF");
+      setSelectedIcon(habit.icon || "💪");
+      setReminderEnabled(habit.reminderEnabled || false);
+      setExistingNotificationId(habit.notificationId || null);
+      if (habit.reminderTime) {
+        const [hours, minutes] = habit.reminderTime.split(":").map(Number);
+        const reminderDate = new Date();
+        reminderDate.setHours(hours);
+        reminderDate.setMinutes(minutes);
+        reminderDate.setSeconds(0);
+        setReminderTime(reminderDate);
+      }
+    } else {
+      Alert.alert("Błąd", "Nie znaleziono nawyku");
+      router.back();
+    }
+  }, [id, habits]);
 
   const formatDate = (date) => {
     const day = date.getDate().toString().padStart(2, "0");
@@ -100,15 +129,15 @@ export default function AddHabitScreen() {
     );
   };
 
-  const toggleTimePicker = () => {
-    setShowReminderTimePicker((prev) => !prev);
-    Keyboard.dismiss();
-  };
-
   const toggleCustomDay = (day) => {
     setCustomDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
+  };
+
+  const toggleTimePicker = () => {
+    setShowReminderTimePicker((prev) => !prev);
+    Keyboard.dismiss();
   };
 
   const handleKeyboardDismiss = () => {
@@ -180,19 +209,27 @@ export default function AddHabitScreen() {
     return notificationId;
   };
 
-  const handleAddHabit = async () => {
+  const handleUpdateHabit = async () => {
     if (
       name.trim() &&
       startDate.trim() &&
       (frequency !== "custom" || customDays.length > 0)
     ) {
-      let notificationId = null;
+      let notificationId = existingNotificationId;
+
+      if (existingNotificationId) {
+        await Notifications.cancelScheduledNotificationAsync(
+          existingNotificationId
+        );
+      }
 
       if (reminderEnabled) {
         notificationId = await scheduleReminder(name);
+      } else {
+        notificationId = null;
       }
 
-      addHabit({
+      editHabit(id, {
         name,
         startDate,
         frequency,
@@ -226,7 +263,7 @@ export default function AddHabitScreen() {
         >
           <Text style={styles.backButtonText}>← Wstecz</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Dodaj nawyk</Text>
+        <Text style={styles.title}>Edytuj nawyk</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -320,7 +357,7 @@ export default function AddHabitScreen() {
             </View>
             <View style={styles.tagContainer}>
               {tags.length === 0 ? (
-                <Text style={styles.emptyTagsText}>Brak utworzonych tagów</Text>
+                <Text style={styles.emptyTagsText}>Brak dostępnych tagów.</Text>
               ) : (
                 tags.map((tag) => (
                   <TouchableOpacity
@@ -450,14 +487,14 @@ export default function AddHabitScreen() {
                   (frequency === "custom" && customDays.length === 0)) &&
                   styles.addButtonDisabled,
               ]}
-              onPress={handleAddHabit}
+              onPress={handleUpdateHabit}
               disabled={
                 !name.trim() ||
                 !startDate.trim() ||
                 (frequency === "custom" && customDays.length === 0)
               }
             >
-              <Text style={styles.addButtonText}>Dodaj Nawyk</Text>
+              <Text style={styles.addButtonText}>Zapisz zmiany</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -570,6 +607,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
+  tagSelected: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
   tagText: {
     color: "#333",
     fontSize: 14,
@@ -594,6 +635,10 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     minWidth: 50,
     alignItems: "center",
+  },
+  dayButtonSelected: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   dayText: {
     color: "#333",

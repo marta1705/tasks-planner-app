@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext } from "react";
 import { usePet } from "./PetContext";
+import * as Notifications from "expo-notifications";
 
 const HabitContext = createContext();
 
@@ -17,18 +18,39 @@ export function HabitProvider({ children }) {
         createdAt: new Date().toISOString(),
       },
     ]);
+  };
 
-    console.log("Habit added:", habit);
+  const deleteHabit = (habitId) => {
+    const habitToDelete = habits.find((habit) => habit.id === habitId);
+    if (habitToDelete?.notificationId) {
+      Notifications.cancelScheduledNotificationAsync(
+        habitToDelete.notificationId
+      );
+    }
+
+    setHabits((prevHabits) =>
+      prevHabits.filter((habit) => habit.id !== habitId)
+    );
+  };
+
+  const editHabit = (habitId, updatedData) => {
+    setHabits((prevHabits) =>
+      prevHabits.map((habit) =>
+        habit.id === habitId ? { ...habit, ...updatedData } : habit
+      )
+    );
   };
 
   const toggleHabitCompletion = (habitId, date) => {
-    const isCurrentlyCompleted = completions[habitId]?.[date] || false;
+    const dateStr =
+      typeof date === "string" ? date : date.toISOString().split("T")[0];
+    const isCurrentlyCompleted = completions[habitId]?.[dateStr] || false;
 
     setCompletions((prevCompletions) => ({
       ...prevCompletions,
       [habitId]: {
         ...prevCompletions[habitId],
-        [date]: !isCurrentlyCompleted,
+        [dateStr]: !isCurrentlyCompleted,
       },
     }));
 
@@ -40,7 +62,9 @@ export function HabitProvider({ children }) {
   };
 
   const isHabitCompletedOnDate = (habitId, date) => {
-    return completions[habitId]?.[date] || false;
+    const dateStr =
+      typeof date === "string" ? date : date.toISOString().split("T")[0];
+    return completions[habitId]?.[dateStr] || false;
   };
 
   const shouldShowHabitOnDate = (habit, date) => {
@@ -69,6 +93,18 @@ export function HabitProvider({ children }) {
     }
   };
 
+  const getHabitsForDate = (selectedTags = [], date) => {
+    const dateString =
+      typeof date === "string" ? date : date.toISOString().split("T")[0];
+    return habits.filter((habit) => {
+      const show = shouldShowHabitOnDate(habit, dateString);
+      const matchesTags =
+        selectedTags.length === 0 ||
+        habit.hashtags.some((tag) => selectedTags.includes(tag));
+      return show && matchesTags;
+    });
+  };
+
   const getTodaysHabits = (selectedTags = []) => {
     const today = new Date().toISOString().split("T")[0];
     return habits.filter((habit) => {
@@ -90,11 +126,15 @@ export function HabitProvider({ children }) {
 
     while (true) {
       const dateString = currentDate.toISOString().split("T")[0];
-      if (shouldShowHabitOnDate(habitId, dateString)) {
+      if (shouldShowHabitOnDate(habit, dateString)) {
         if (isHabitCompletedOnDate(habitId, dateString)) {
           streak++;
         } else {
-          break;
+          if (dateString === today.toISOString().split("T")[0]) {
+            // nie przerywaj streaku, jeśli dzisiaj nie było jeszcze wykonania
+          } else {
+            break;
+          }
         }
       }
       currentDate.setDate(currentDate.getDate() - 1);
@@ -119,6 +159,9 @@ export function HabitProvider({ children }) {
         getHabitStreak,
         completions,
         shouldShowHabitOnDate,
+        getHabitsForDate,
+        deleteHabit,
+        editHabit,
       }}
     >
       {children}

@@ -4,6 +4,17 @@ import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { PetProvider } from "../context/PetContext";
 import "../services/firebase";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 function RootLayoutNav() {
   const { isAuthenticated, loading, registering } = useAuth();
@@ -47,7 +58,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PetProvider>
-        <RootLayoutNav />
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <RootLayoutNav />
+        </GestureHandlerRootView>
       </PetProvider>
     </AuthProvider>
   );
