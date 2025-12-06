@@ -12,40 +12,51 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [registering, setRegistering] = useState(false);
   const db = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // odświeża dane użytkownika
-        await user.reload();
-        const refreshedUser = auth.currentUser;
+      try {
+        if (user) {
+          // odświeża dane użytkownika
+          await user.reload();
+          const refreshedUser = auth.currentUser;
 
-        // aktualizacja usera
-        setUser(refreshedUser);
+          // aktualizacja usera
+          if (!refreshedUser) {
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+          setUser(refreshedUser);
 
-        // === AKTUALIZACJA EMAILA W FIRESTORE ===
-        try {
-          const userRef = doc(db, "users", refreshedUser.uid);
-          await updateDoc(userRef, { email: refreshedUser.email });
-        } catch (err) {
-          console.log("Firestore update error:", err);
+
+          if (refreshedUser?.uid) {
+            const userRef = doc(db, "users", refreshedUser.uid);
+            await updateDoc(userRef, { email: refreshedUser.email }).catch(() => { });
+          }
+
+        } else {
+          setUser(null);
         }
-      } else {
-        setUser(null);
-      }
 
-      setLoading(false);
+        setLoading(false);
+      } catch (err) {
+        console.log("Auth error:", err);
+        setLoading(false);
+      }
     });
 
     return unsubscribe;
   }, []);
 
-
   const value = {
     user,
     isAuthenticated: !!user,
     loading,
+    registering,
+    setRegistering,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

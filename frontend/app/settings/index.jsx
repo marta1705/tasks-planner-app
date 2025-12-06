@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signOut, updateProfile, verifyBeforeUpdateEmail } from "firebase/auth";
+import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signOut, updatePassword, updateProfile, verifyBeforeUpdateEmail } from "firebase/auth";
 import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -25,6 +25,11 @@ export default function SettingsScreen() {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
 
   // Zapis imienia do Firebase
   const handleSaveName = async () => {
@@ -50,7 +55,7 @@ export default function SettingsScreen() {
     }
   };
 
-  // Zapis emaila
+  // Zmiana emaila
   const handleChangeEmail = async () => {
     try {
       setLoading(true);
@@ -83,6 +88,58 @@ export default function SettingsScreen() {
     }
   };
 
+  // Logika zmiany hasła
+  const handleChangePassword = async () => {
+    try {
+      setLoading(true);
+
+      // walidacja jak przy rejestracji
+      if (newPassword.length < 6) {
+        Alert.alert("Błąd", "Hasło musi mieć co najmniej 6 znaków");
+        setLoading(false);
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        Alert.alert("Błąd", "Hasła nie są identyczne");
+        setLoading(false);
+        return;
+      }
+
+      // Reautentykacja
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email,
+        currentPassword
+      );
+
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
+      // Zmiana hasła
+      await updatePassword(auth.currentUser, newPassword);
+
+      Alert.alert("Sukces", "Hasło zostało zmienione.");
+
+      // wyczyszczenie pol
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+
+      // zamkniecie modalu
+      setPasswordModalVisible(false);
+
+    } catch (error) {
+      console.log(error);
+
+      if (error.code === "auth/wrong-password") {
+        Alert.alert("Błąd", "Aktualne hasło jest nieprawidłowe.");
+      } else {
+        Alert.alert("Błąd", "Nie udało się zmienić hasła.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Wylogowanie
   const handleLogout = async () => {
     try {
@@ -103,8 +160,21 @@ export default function SettingsScreen() {
         <Text style={styles.header}>Ustawienia</Text>
       </View>
 
+      {/* -------- PROFIL -------- */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Ionicons name="person-circle-outline" size={70} color="#007AFF" />
+        </View>
+
+        <View>
+          <Text style={styles.profileName}>{name}</Text>
+          <Text style={styles.profileEmail}>{email}</Text>
+        </View>
+      </View>
+
       {/* ------------------- ZMIANA IMIENIA ------------------- */}
       <View style={styles.section}>
+        <Ionicons name="person-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Zmiana imienia</Text>
         <TextInput
           style={styles.input}
@@ -119,6 +189,7 @@ export default function SettingsScreen() {
 
       {/* ====== ZMIANA HASŁA ====== */}
       <View style={styles.section}>
+        <Ionicons name="lock-closed-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Hasło</Text>
         <TouchableOpacity
           style={styles.changePasswordButton}
@@ -129,6 +200,7 @@ export default function SettingsScreen() {
       </View>
       {/* ------------------- ZMIANA EMAILA ------------------- */}
       <View style={styles.section}>
+        <Ionicons name="mail-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Email</Text>
 
         <TouchableOpacity
@@ -147,6 +219,7 @@ export default function SettingsScreen() {
 
       {/* ====== USUNIĘCIE KONTA ====== */}
       <TouchableOpacity style={styles.deleteButton}>
+        <Ionicons name="warning-outline" size={22} color="#fff" />
         <Text style={styles.deleteButtonText}>Usuń konto</Text>
       </TouchableOpacity>
 
@@ -187,7 +260,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Modal zmiany hasła */}
+      {/* ========== Modal zmiany hasła ========= */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -198,22 +271,70 @@ export default function SettingsScreen() {
           <View style={styles.passwordModalBox}>
             <Text style={styles.passwordModalTitle}>Zmień hasło</Text>
 
-            <TextInput
-              style={styles.passwordInput}
-              secureTextEntry
-              placeholder="Aktualne hasło"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
+            {/* Aktualne hasło */}
+            <View style={styles.passwordField}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!showCurrentPassword}
+                placeholder="Aktualne hasło"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                <Ionicons
+                  name={showCurrentPassword ? "eye-outline" : "eye-off-outline"}
+                  size={22}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
 
-            <TextInput
-              style={styles.passwordInput}
-              secureTextEntry
-              placeholder="Nowe hasło"
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
+            {/* Nowe hasło */}
+            <View style={styles.passwordField}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!showNewPassword}
+                placeholder="Nowe hasło"
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <Ionicons
+                  name={showNewPassword ? "eye-outline" : "eye-off-outline"}
+                  size={22}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
 
+            {/* Powtórz nowe hasło */}
+            <View style={styles.passwordField}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!showRepeatPassword}
+                placeholder="Powtórz nowe hasło"
+                value={confirmNewPassword}
+                onChangeText={setConfirmNewPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowRepeatPassword(!showRepeatPassword)}
+              >
+                <Ionicons
+                  name={showRepeatPassword ? "eye-outline" : "eye-off-outline"}
+                  size={22}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Przyciski */}
             <View style={styles.passwordModalButtons}>
               <TouchableOpacity
                 style={[styles.passwordModalButton, { backgroundColor: "#ccc" }]}
@@ -224,12 +345,15 @@ export default function SettingsScreen() {
 
               <TouchableOpacity
                 style={[styles.passwordModalButton, { backgroundColor: "#007AFF" }]}
-                onPress={() => {
-                }}
+                onPress={handleChangePassword}
+                disabled={loading}
               >
-                <Text style={styles.passwordModalButtonText}>Zapisz</Text>
+                <Text style={styles.passwordModalButtonText}>
+                  {loading ? "..." : "Zapisz"}
+                </Text>
               </TouchableOpacity>
             </View>
+
           </View>
         </View>
       </Modal>
@@ -239,12 +363,6 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: 60,
-    paddingBottom: 80,
-    paddingHorizontal: 20,
-    backgroundColor: "#f5f5f5",
-  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -263,12 +381,45 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   section: {
-    marginBottom: 30,
+    marginBottom: 25,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 14,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   sectionLabel: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 10,
+  },
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 30,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  avatar: {
+    marginRight: 15,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 2,
   },
   input: {
     backgroundColor: "#fff",
@@ -311,6 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff4444",
     paddingVertical: 14,
     borderRadius: 10,
+    elevation: 3,
   },
   logoutButtonText: {
     color: "#fff",
@@ -356,11 +508,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   passwordInput: {
+    width: "100%",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingRight: 40,
+    fontSize: 16,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
   },
   passwordModalButtons: {
     flexDirection: "row",
@@ -372,9 +527,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 8,
   },
+  passwordField: {
+    marginBottom: 15,
+    position: "relative",
+  },
   passwordModalButtonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: [{ translateY: -11 }],
   },
   cancelButton: {
     marginTop: 10,
@@ -388,10 +553,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   deleteButton: {
-    marginTop: "auto",
+    marginTop: 50,
     paddingVertical: 14,
     backgroundColor: "#ff4444",
-    borderRadius: 8,
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   deleteButtonText: {
     color: "#fff",

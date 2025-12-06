@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     fontSize: 42,
     textAlign: "center",
     fontWeight: "bold",
-    marginBottom: 30,
+    marginBottom: 15,
   },
   logoutButton: {
     backgroundColor: "#ff4444",

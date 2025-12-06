@@ -5,12 +5,12 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../services/firebase";
 
 function RootLayoutNav() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, registering } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    if (loading) return; // jeśli stan autentykacji jest w trakcie ładowania, nie zostana wykonane zadne przekierowania
+    if (loading || registering) return; // jeśli stan autentykacji jest w trakcie ładowania, nie zostana wykonane zadne przekierowania
     //const inAuthGroup = segments[0] !== "login" && segments[0] !== "_sitemap";
     const inAuthGroup = segments[0] === "login" || segments[0] === "register";
     // jeśli użytkownik nie jest zalogowany i nie jest na ekranie logowania zostanie tam przekierowany.
@@ -21,8 +21,8 @@ function RootLayoutNav() {
     else if (isAuthenticated && inAuthGroup) {
       router.replace("/"); // przekierowanie na główny ekran aplikacji
     }
-  }, [isAuthenticated, loading, segments]); // efekt uruchomi się ponownie, gdy zmieni się stan autentykacji
-  if (loading) {
+  }, [isAuthenticated, loading, registering, segments]); // efekt uruchomi się ponownie, gdy zmieni się stan autentykacji
+  if (loading || registering) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />

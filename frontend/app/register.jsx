@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import React from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,15 +15,18 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useAuth } from '../context/AuthContext';
 import { auth, db } from "../services/firebase";
 
 
 export default function RegisterScreen() {
+  const { setRegistering } = useAuth();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [verifyModalVisible, setVerifyModalVisible] = React.useState(false);
   const router = useRouter();
 
   const validateForm = () => {
@@ -60,6 +64,10 @@ export default function RegisterScreen() {
     if (!validateForm()) {
       return;
     }
+
+    // flaga blokująca przekierowania w Layout podczas rejestracji
+    setRegistering(true);
+
     try {
       // utworzenie użytkownika w Authentication
       const userCredential = await createUserWithEmailAndPassword(
@@ -78,12 +86,25 @@ export default function RegisterScreen() {
         uid: user.uid,
         name: name,
         email: user.email,
-        createdAt: new Date(), // data dolaczenia
-
+        createdAt: new Date(),
       });
 
+      // 4. Wysyłanie emaila aktywacyjnego
+      await sendEmailVerification(user);
+
+      // 5. Wylogowanie – żeby nie wejść do aplikacji bez aktywacji linku w mailu
+      await auth.signOut();
+
+      alert(
+        "Twoje konto zostało utworzone.\n\n" +
+        "Wysłaliśmy link aktywacyjny na: " + email + "\n\n" +
+        "Po potwierdzeniu możesz się zalogować."
+      );
+
+      // 6. Przekierowanie użytkownika
+      router.replace("/login");
+
       console.log("User registered with name:", name);
-      router.replace("/");
 
     } catch (error) {
       console.error("Błąd rejestracji:", error.code, error.message);
@@ -103,6 +124,9 @@ export default function RegisterScreen() {
         default:
           setError("Wystąpił błąd: " + error.message);
       }
+    } finally {
+      // Ustawienia flagi na false – odblokowanie przekierowań w Layout
+      setRegistering(false);
     };
   };
 
@@ -203,6 +227,52 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+      <Modal
+        visible={verifyModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <View style={{
+            width: "80%",
+            backgroundColor: "white",
+            padding: 20,
+            borderRadius: 12,
+            alignItems: "center"
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
+              Potwierdź swój email
+            </Text>
+
+            <Text style={{ textAlign: "center", fontSize: 16, marginBottom: 20 }}>
+              Wysłaliśmy link aktywacyjny na:{"\n"}
+              <Text style={{ fontWeight: "600" }}>{email}</Text>
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#007AFF",
+                paddingVertical: 12,
+                paddingHorizontal: 30,
+                borderRadius: 10
+              }}
+              onPress={() => {
+                setVerifyModalVisible(false);
+                router.replace("/login");
+              }}
+            >
+              <Text style={{ color: "white", fontSize: 16, fontWeight: "600" }}>
+                OK
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

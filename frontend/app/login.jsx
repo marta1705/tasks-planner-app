@@ -1,22 +1,27 @@
 import { useRouter } from "expo-router";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import React from "react";
 import {
-  Text,
-  TextInput,
-  View,
-  StyleSheet,
-  TouchableOpacity,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [resetModalVisible, setResetModalVisible] = React.useState(false);
+  const [resetEmail, setResetEmail] = React.useState("");
+  const [resetError, setResetError] = React.useState("");
+  const [resetLoading, setResetLoading] = React.useState(false);
+
   const auth = getAuth();
   const router = useRouter();
 
@@ -46,7 +51,15 @@ export default function LoginScreen() {
 
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        console.log("User logged in:", userCredential.user.email);
+        const user = userCredential.user;
+        // sprawdzenie czy email jest zweryfikowany
+        if (!user.emailVerified) {
+          setError("Musisz najpierw potwierdzić adres email.");
+          auth.signOut();
+          return;
+        }
+
+        console.log("User logged in:", user.email);
       })
       .catch((error) => {
         // Obsługa błędów Firebase
@@ -77,6 +90,36 @@ export default function LoginScreen() {
         }
       });
   };
+
+  const handlePasswordReset = async () => {
+    setResetError("");
+
+    if (!resetEmail) {
+      setResetError("Podaj adres email");
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      await sendPasswordResetEmail(auth, resetEmail);
+
+      alert("Wysłaliśmy link do resetu hasła na podany email.");
+      setResetModalVisible(false);
+      setResetEmail("");
+    } catch (error) {
+      console.log(error);
+      if (error.code === "auth/user-not-found") {
+        setResetError("Nie znaleziono konta z tym adresem email");
+      } else if (error.code === "auth/invalid-email") {
+        setResetError("Nieprawidłowy adres email");
+      } else {
+        setResetError("Nie udało się wysłać wiadomości");
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
 
   return (
     <KeyboardAvoidingView
@@ -126,6 +169,13 @@ export default function LoginScreen() {
             <Text style={styles.primaryButtonText}>Zaloguj się</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            onPress={() => setResetModalVisible(true)}
+            style={{ alignSelf: "flex-end", marginTop: 12 }}
+          >
+            <Text style={styles.forgotPasswordText}>Nie pamiętam hasła</Text>
+          </TouchableOpacity>
+
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>lub</Text>
@@ -140,6 +190,50 @@ export default function LoginScreen() {
               Nie masz konta? Zarejestruj się
             </Text>
           </TouchableOpacity>
+
+
+
+          {/* Modal resetu hasła*/}
+          {resetModalVisible && (
+            <View style={styles.resetOverlay}>
+              <View style={styles.resetBox}>
+                <Text style={styles.resetTitle}>Reset hasła</Text>
+
+                {resetError ? (
+                  <Text style={styles.resetError}>⚠️ {resetError}</Text>
+                ) : null}
+
+                <TextInput
+                  placeholder="Podaj email"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={styles.resetInput}
+                />
+
+                <View style={styles.resetButtons}>
+                  <TouchableOpacity
+                    style={[styles.resetButton, { backgroundColor: "#ccc" }]}
+                    onPress={() => setResetModalVisible(false)}
+                  >
+                    <Text>Anuluj</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.resetButton, { backgroundColor: "#007AFF" }]}
+                    onPress={handlePasswordReset}
+                    disabled={resetLoading}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "600" }}>
+                      {resetLoading ? "Wysyłanie..." : "Wyślij link"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -241,4 +335,56 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
+  forgotPasswordText: {
+    color: "#727272ff",
+    fontSize: 14,
+    textDecorationLine: "underline",
+    fontWeight: "500",
+  },
+  resetOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  resetBox: {
+    width: "100%",
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 14,
+  },
+  resetTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  resetError: {
+    color: "#cc0000",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  resetInput: {
+    backgroundColor: "#f9f9f9",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginBottom: 20,
+  },
+  resetButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  resetButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+
 });
