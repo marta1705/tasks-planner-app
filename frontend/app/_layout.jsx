@@ -1,13 +1,13 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { PetProvider } from "../context/PetContext";
 import "../services/firebase";
 
 function RootLayoutNav() {
   const { isAuthenticated, loading, registering } = useAuth();
   const router = useRouter();
-  const segments = useSegments();
 
   useEffect(() => {
     if (loading || registering) return; // jeśli stan autentykacji jest w trakcie ładowania, nie zostana wykonane zadne przekierowania
@@ -32,7 +32,10 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* główny layout Tabs */}
       <Stack.Screen name="(tabs)" />
+
+      {/* ekrany niezalogowanego */}
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
     </Stack>
@@ -42,7 +45,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <PetProvider>
+        <RootLayoutNav />
+      </PetProvider>
     </AuthProvider>
   );
 }

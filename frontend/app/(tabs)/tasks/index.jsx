@@ -1,611 +1,981 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Modal,
-} from "react-native";
+// frontend/app/(tabs)/tasks/index.jsx
+
 import { useRouter } from "expo-router";
-import { useTasks } from "../../../context/TaskContext";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    Dimensions,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
 import { useTags } from "../../../context/TagsContext";
+import { PRIORITY_OPTIONS, useTasks } from "../../../context/TaskContext";
 
-export default function Tasks() {
-  const router = useRouter();
-  const {
-    getTasksByCategory,
-    toggleTaskCompletion,
-    deleteTask,
-    getDaysUntilDeadline,
-    getTaskPriority,
-  } = useTasks();
-  const { tags, addTag, deleteTag, filterTags, toggleFilterTag } = useTags();
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [newTag, setNewTag] = useState("");
+// Pobierz wysokość okna, aby dynamicznie ustalić minimalną wysokość nagłówka
+const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
-  const taskCategories = getTasksByCategory(filterTags);
+// Ustawienie wysokości nagłówka dla tytułu (~3.5% wysokości ekranu plus padding na pasek statusu)
+const HEADER_HEIGHT_PADDING = 60; 
+const MIN_HEADER_HEIGHT = screenHeight * 0.035; 
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const options = {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
+// --- SYMULACJA USTAWIEŃ UŻYTKOWNIKA (DLA PERSONALIZACJI KALENDARZA) ---
+// 1 = Poniedziałek, 0 = Niedziela
+const USER_START_DAY_OF_WEEK = 1; 
+const USER_ACTIVE_HOURS_START = 6; // Np. 06:00
+const USER_ACTIVE_HOURS_END = 22; // Np. 22:00
+// -----------------------------------------------------------------------
+
+// STAŁE WIDOKU
+const TIME_COLUMN_WIDTH = 40;
+const TOTAL_DAYS_WIDTH = screenWidth - TIME_COLUMN_WIDTH;
+const DAY_COLUMN_WIDTH = TOTAL_DAYS_WIDTH / 7;
+const HOUR_HEIGHT = 60;
+
+// -------------------------------------------------------------------
+// ✅ POPRAWKA 1: toDateString używa lokalnych komponentów
+// -------------------------------------------------------------------
+const toDateString = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+// -------------------------------------------------------------------
+// ✅ POPRAWKA 2: normalizeDate używa lokalnych komponentów
+// -------------------------------------------------------------------
+const normalizeDate = (dateStr) => {
+    if (!dateStr) return null;
+    
+    // Rozbijamy YYYY-MM-DD na komponenty
+    const [year, month, day] = dateStr.split('-').map(Number);
+
+    // Tworzymy obiekt Date przy użyciu LOKALNYCH komponentów (Miesiąc jest 0-indeksowany)
+    const date = new Date(year, month - 1, day); 
+    date.setHours(0, 0, 0, 0); 
+    
+    return date;
+};
+// -------------------------------------------------------------------
+
+// Funkcja do łączenia daty i czasu w obiekt Date
+const combineDateTime = (dateString, timeString) => {
+    if (!dateString || !timeString) return null;
+    
+    // Używamy normalizeDate, aby upewnić się, że data bazowa jest poprawna
+    const baseDate = normalizeDate(dateString); 
+    if (!baseDate) return null;
+    
+    const [hours, minutes] = timeString.split(':').map(Number);
+    
+    const combined = new Date(baseDate);
+    combined.setHours(hours, minutes, 0, 0);
+    
+    return combined;
+};
+
+
+// -------------------------------------------------------------------
+// --- GŁÓWNY KOMPONENT WIDOKU ZADAŃ (index.jsx) ---
+// -------------------------------------------------------------------
+
+export default function TasksIndex() {
+    const router = useRouter();
+    const { tasks, completeTask, deleteTask } = useTasks();
+    const { tags } = useTags();
+
+    // Wczytanie daty z parametrów (jeśli przekazano z widoku miesięcznego)
+    const urlParams = router.params || {};
+    const initialDate = urlParams.date 
+        ? normalizeDate(urlParams.date) 
+        : normalizeDate(toDateString(new Date()));
+    
+    // ✅ ZMIANA: Ustawienie 'agenda' jako domyślnego widoku
+    const [viewMode, setViewMode] = useState(urlParams.viewMode || 'agenda'); 
+    const [currentDate, setCurrentDate] = useState(initialDate);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedTags, setSelectedTags] = useState([]);
+
+
+    // Funkcja do generowania listy dni w widoku tygodniowym (zaczynając od poniedziałku)
+    const getWeekDays = useCallback((date) => {
+        const startOfWeek = new Date(date);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Znajdź początek tygodnia (np. Poniedziałek)
+        const dayOfWeek = startOfWeek.getDay() === 0 ? 7 : startOfWeek.getDay(); // 1=Pn, 7=Nd
+        const diff = dayOfWeek - USER_START_DAY_OF_WEEK;
+
+        // Ustaw datę na początek bieżącego tygodnia (np. 4 dni wstecz dla czwartku, jeśli start to poniedziałek)
+        startOfWeek.setDate(startOfWeek.getDate() - diff);
+
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(startOfWeek);
+            day.setDate(startOfWeek.getDate() + i);
+            days.push(day);
+        }
+        return days;
+    }, []);
+
+    const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate, getWeekDays]);
+    
+    // Efekt do aktualizacji widoku na podstawie parametrów URL
+    useEffect(() => {
+        if (urlParams.date) {
+            setCurrentDate(normalizeDate(urlParams.date));
+        }
+        if (urlParams.viewMode) {
+            setViewMode(urlParams.viewMode);
+        }
+    }, [urlParams.date, urlParams.viewMode]);
+
+
+    // --- Logika filtrowania i grupowania zadań ---
+    const filteredTasks = useMemo(() => {
+        let result = tasks; 
+        
+        // Filtr dla zadań ukończonych, aby pokazywać je tylko w bieżącym dniu
+        const todayStr = toDateString(new Date());
+        const todayNormalized = normalizeDate(todayStr);
+
+        // 1. Filtr wykonanych zadań (globalny)
+        if (viewMode !== 'agenda') {
+            result = result.filter(task => {
+                if (!task.isCompleted) return true; // Zawsze pokazuj nieukończone
+                
+                // Pokaż ukończone, jeśli ich data rozpoczęcia jest dziś (lub deadline, jeśli to całodniowe)
+                const taskDate = normalizeDate(task.startDate);
+                
+                // Jeśli data rozpoczęcia jest DZIŚ
+                if (taskDate && taskDate.getTime() === todayNormalized.getTime()) return true;
+
+                // Sprawdź zadania całodniowe: jeśli ich deadline jest dzisiaj lub w przyszłości
+                if (task.isAllDay) {
+                    const deadlineDate = normalizeDate(task.deadline);
+                    if (deadlineDate && deadlineDate >= todayNormalized) return true;
+                }
+                
+                return false; // Ukryj zadania ukończone w przeszłości
+            });
+        }
+        // W widoku Agendy nie filtrujemy ukończonych (użytkownik widzi wszystko)
+
+
+        // 2. Filtr wyszukiwania
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase();
+            result = result.filter(task => 
+                task.name.toLowerCase().includes(lowerSearch) ||
+                task.description.toLowerCase().includes(lowerSearch)
+            );
+        }
+
+        // 3. Filtr tagów
+        if (selectedTags.length > 0) {
+            result = result.filter(task => 
+                task.tags && selectedTags.every(tag => task.tags.includes(tag))
+            );
+        }
+
+        // 4. Grupowanie i sortowanie (poprawiona logika, która zależy od normalizeDate)
+        const grouped = {};
+        
+        result.forEach(task => {
+            let taskDateStr = task.startDate;
+            let taskDate = normalizeDate(taskDateStr); 
+            
+            // Logika dla zadań całodniowych
+            if (task.isAllDay) {
+                const deadlineDate = normalizeDate(task.deadline);
+                
+                // Zadanie całodniowe musi być aktywne dziś lub w przyszłym tygodniu
+                if (taskDate && deadlineDate && taskDate <= normalizeDate(todayStr) && deadlineDate >= normalizeDate(todayStr)) {
+                    // W widoku Dzień/Tydzień, zadanie całodniowe pojawia się na każdy dzień w zakresie
+                    let current = new Date(taskDate);
+                    while (current <= deadlineDate) {
+                        const dateStr = toDateString(current);
+                        
+                        // Ograniczenie do widocznego tygodnia/dnia w widoku week/day
+                        if ((viewMode === 'day' && dateStr !== toDateString(currentDate)) ||
+                            (viewMode === 'week' && !weekDays.some(d => toDateString(d) === dateStr))) 
+                        {
+                            current.setDate(current.getDate() + 1);
+                            continue;
+                        }
+                        
+                        if (!grouped[dateStr]) grouped[dateStr] = [];
+                        grouped[dateStr].push(task);
+                        current.setDate(current.getDate() + 1);
+                    }
+                }
+            } else {
+                // Zadanie z czasem (pojawia się tylko w dniu startDate)
+                if (taskDate) {
+                    if (!grouped[taskDateStr]) grouped[taskDateStr] = [];
+                    grouped[taskDateStr].push(task);
+                }
+            }
+        });
+
+        // 5. Sortowanie zadań w grupach (wg ukończenia, godziny rozpoczęcia, potem priorytetu)
+        Object.keys(grouped).forEach(dateStr => {
+            grouped[dateStr].sort((a, b) => {
+                // Ukończone na koniec dnia
+                if (a.isCompleted !== b.isCompleted) {
+                    return a.isCompleted ? 1 : -1;
+                }
+
+                // Zadania całodniowe (bez godziny) idą na górę
+                if (a.isAllDay && !b.isAllDay) return -1;
+                if (!a.isAllDay && b.isAllDay) return 1;
+                
+                // Jeśli oba mają czas, sortuj wg czasu
+                if (!a.isAllDay && !b.isAllDay) {
+                    const timeA = a.startTime.replace(':', '');
+                    const timeB = b.startTime.replace(':', '');
+                    return timeA - timeB;
+                }
+
+                // W ostateczności sortuj wg priorytetu
+                const priorityOrder = { 'urgent': 1, 'medium': 2, 'low': 3 };
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
+        });
+
+        return grouped;
+    }, [tasks, searchTerm, selectedTags, viewMode, currentDate, weekDays]);
+
+
+    // --- Logika nawigacji (Dzień/Tydzień) ---
+
+    const changeDate = (offset) => {
+        setCurrentDate(prevDate => {
+            const newDate = new Date(prevDate);
+            if (viewMode === 'day' || viewMode === 'agenda') {
+                newDate.setDate(newDate.getDate() + offset);
+            } else if (viewMode === 'week') {
+                newDate.setDate(newDate.getDate() + offset * 7);
+            }
+            return normalizeDate(toDateString(newDate));
+        });
     };
-    return date.toLocaleDateString("pl-PL", options);
-  };
 
-  const getDeadlineText = (deadline) => {
-    const days = getDaysUntilDeadline(deadline);
-    const today = new Date().toISOString().split("T")[0];
+    const handleTagToggle = (tag) => {
+        setSelectedTags(prev => 
+            prev.includes(tag) 
+                ? prev.filter(t => t !== tag) 
+                : [...prev, tag]
+        );
+    };
 
-    if (deadline < today) {
-      return `Przeterminowane o ${Math.abs(days)} dni`;
-    } else if (deadline === today) {
-      return "Dziś";
-    } else if (days === 1) {
-      return "Jutro";
-    } else if (days <= 7) {
-      return `Za ${days} dni`;
-    } else {
-      return formatDate(deadline);
-    }
-  };
+    // --- RENDEROWANIE ELEMENTÓW WIDOKU ---
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "overdue":
-        return "#FF3B30";
-      case "today":
-        return "#FF9500";
-      case "urgent":
-        return "#FF9500";
-      case "medium":
-        return "#007AFF";
-      case "low":
-        return "#34C759";
-      case "completed":
-        return "#8E8E93";
-      default:
-        return "#007AFF";
-    }
-  };
+    // Funkcja do renderowania pojedynczego zadania na liście (Agenda/Lista)
+    const renderTaskListItem = (task) => {
+        const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
 
-  const handleAddTag = () => {
-    if (newTag.trim()) {
-      addTag(newTag);
-      setNewTag("");
-    }
-  };
+        // DODANO: Sprawdzenie, czy zadanie jest ukończone
+        const isCompleted = task.isCompleted;
 
-  const handleDeleteTask = (taskId) => {
-    Alert.alert("Usuń zadanie", "Czy na pewno chcesz usunąć to zadanie?", [
-      { text: "Anuluj", style: "cancel" },
-      { text: "Usuń", style: "destructive", onPress: () => deleteTask(taskId) },
-    ]);
-  };
-
-  const handleDeleteTag = (tag) => {
-    Alert.alert("Usuń tag", `Czy na pewno chcesz usunąć tag "${tag}"?`, [
-      { text: "Anuluj", style: "cancel" },
-      { text: "Usuń", style: "destructive", onPress: () => deleteTag(tag) },
-    ]);
-  };
-
-  const renderTask = (task) => {
-    const priority = getTaskPriority(task);
-    const priorityColor = getPriorityColor(priority);
-
-    return (
-      <TouchableOpacity
-        key={task.id}
-        style={[
-          styles.taskItem,
-          task.isCompleted && styles.taskCompleted,
-          { borderLeftColor: priorityColor },
-        ]}
-        onPress={() => toggleTaskCompletion(task.id)}
-      >
-        <View style={styles.taskContent}>
-          <View style={styles.taskHeader}>
-            <Text
-              style={[
-                styles.taskName,
-                task.isCompleted && styles.taskNameCompleted,
-              ]}
+        return (
+            <TouchableOpacity 
+                key={task.id} 
+                style={[
+                    styles.taskItem, 
+                    { borderLeftColor: priorityOption.color },
+                    isCompleted && styles.taskItemCompleted 
+                ]}
+                onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
             >
-              {task.name}
-            </Text>
-            <Text style={[styles.deadlineText, { color: priorityColor }]}>
-              {getDeadlineText(task.deadline)}
-            </Text>
-          </View>
+                <View style={styles.taskContent}>
+                    <Text style={styles.taskIcon}>{task.icon}</Text>
+                    <View style={styles.taskDetails}>
+                        <Text 
+                            style={[styles.taskName, isCompleted && styles.taskNameCompleted]} 
+                        >
+                            {task.name}
+                        </Text>
+                        <View style={styles.taskMeta}>
+                            <Text style={[styles.taskTime, { color: priorityOption.color }]}>
+                                {task.isAllDay ? 'Cały dzień' : `${task.startTime} - ${task.endTime}`}
+                            </Text>
+                            {task.tags?.map(tag => (
+                                <Text key={tag} style={styles.taskTag}>{tag}</Text>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+                <TouchableOpacity 
+                    onPress={() => completeTask(task.id)} 
+                    style={[styles.completeButton, isCompleted && styles.completeButtonCompleted]} 
+                >
+                    {/* W widoku agendy/listy wstawiamy '✓' jeśli jest completed */}
+                    <Text style={styles.completeButtonText}>{isCompleted ? '✓' : ''}</Text>
+                </TouchableOpacity>
+            </TouchableOpacity>
+        );
+    };
 
-          {task.hashtags && task.hashtags.length > 0 && (
-            <View style={styles.taskTags}>
-              {task.hashtags.map((tag, index) => (
-                <Text key={index} style={styles.taskTag}>
-                  {tag}
-                </Text>
-              ))}
+    // NOWA FUNKCJA RENDERUJĄCA NAGŁÓWKI DNI DLA SIATKI
+    const renderDayHeadersInGrid = (daysToRender) => {
+        const todayStr = toDateString(new Date());
+
+        return (
+            <View style={styles.dayHeaderRowGrid}>
+                {/* Pusta kolumna na czas */}
+                <View style={styles.timeHeaderPlaceholder} /> 
+                {daysToRender.map((day) => {
+                    const dateStr = toDateString(day);
+                    const isToday = todayStr === dateStr;
+                    
+                    return (
+                        <View key={dateStr} style={[styles.dayHeaderGrid, isToday && styles.todayHeaderGrid]}>
+                            <Text style={[styles.dayHeaderTextGrid, isToday && styles.todayHeaderTextGrid]}>
+                                {day.toLocaleDateString('pl-PL', { weekday: 'short' })}
+                            </Text>
+                            <Text style={[styles.dayHeaderDateGrid, isToday && styles.todayHeaderTextGrid]}>
+                                {day.getDate()}
+                            </Text>
+                        </View>
+                    );
+                })}
             </View>
-          )}
-        </View>
+        );
+    };
 
-        <View style={styles.taskActions}>
-          <TouchableOpacity
-            style={[
-              styles.checkbox,
-              task.isCompleted && styles.checkboxCompleted,
-            ]}
-            onPress={() => toggleTaskCompletion(task.id)}
-          >
-            {task.isCompleted && <Text style={styles.checkmark}>✓</Text>}
-          </TouchableOpacity>
+    // Funkcja do renderowania siatki czasowej (dla widoków Day/Week)
+    const renderTimeGrid = () => {
+        const hours = [];
+        for (let i = USER_ACTIVE_HOURS_START; i <= USER_ACTIVE_HOURS_END; i++) {
+            const hour = `${i < 10 ? '0' + i : i}:00`;
+            hours.push(hour);
+        }
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteTask(task.id)}
-          >
-            <Text style={styles.deleteButtonText}>🗑️</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+        // ZMIANA: Dla widoku 'day', renderujemy tylko currentDate
+        const daysToRender = viewMode === 'day' ? [currentDate] : weekDays;
+        
+        // Renderowanie zadań w widoku Day/Week
+        const renderTaskInGrid = (task) => {
+            if (task.isAllDay) return null; 
 
-  const renderSection = (title, tasks, emptyMessage) => {
-    if (tasks.length === 0) return null;
+            const start = combineDateTime(task.startDate, task.startTime);
+            const end = combineDateTime(task.startDate, task.endTime);
+            if (!start || !end) return null;
+
+            // Obliczenia pozycji i wysokości zadania
+            const startHour = start.getHours() + start.getMinutes() / 60;
+            const endHour = end.getHours() + end.getMinutes() / 60;
+            
+            const totalDuration = endHour - startHour;
+            const topOffset = (startHour - USER_ACTIVE_HOURS_START) * HOUR_HEIGHT;
+            const height = totalDuration * HOUR_HEIGHT;
+
+            const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
+            const isCompleted = task.isCompleted;
+
+            return (
+                <TouchableOpacity
+                    key={task.id}
+                    style={[
+                        styles.gridTask,
+                        {
+                            top: topOffset,
+                            height: height,
+                            // Użycie styli dla ukończonych zadań
+                            backgroundColor: isCompleted ? '#ccc30' : priorityOption.color + '30',
+                            borderColor: isCompleted ? '#aaa' : priorityOption.color,
+                            opacity: isCompleted ? 0.7 : 1,
+                        }
+                    ]}
+                    onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
+                >
+                    <Text 
+                        style={[
+                            styles.gridTaskText, 
+                            isCompleted && { textDecorationLine: 'line-through' }
+                        ]} 
+                        numberOfLines={2}
+                    >
+                        {task.icon} {task.name}
+                    </Text>
+                    <Text style={styles.gridTaskTime}>{task.startTime}-{task.endTime}</Text>
+                </TouchableOpacity>
+            );
+        };
+        
+        // Renderowanie kolumn dni
+        const renderDayColumn = (date, isToday) => {
+            const dateStr = toDateString(date);
+            // KLUCZOWY PUNKT FILTROWANIA
+            const dayTasks = filteredTasks[dateStr] || []; 
+
+            // Filtrujemy zadania z czasem
+            const timedTasks = dayTasks.filter(task => !task.isAllDay);
+
+
+            return (
+                <View key={dateStr} style={[styles.dayColumn, isToday && styles.todayColumn]}>
+                    {/* Linia siatki dla każdej godziny */}
+                    {hours.slice(0, hours.length - 1).map((_, index) => (
+                        <View key={index} style={styles.gridLine} />
+                    ))}
+                    {/* Renderowanie zadań */}
+                    {timedTasks.map(renderTaskInGrid)}
+                </View>
+            );
+        };
+
+        // Renderowanie całodniowych zadań
+        const renderAllDayTasks = (date) => {
+            const dateStr = toDateString(date);
+            const dayTasks = filteredTasks[dateStr] || [];
+            const allDayTasks = dayTasks.filter(task => task.isAllDay);
+
+            if (allDayTasks.length === 0) return null;
+
+            return (
+                <View style={styles.allDayContainer}>
+                    {allDayTasks.slice(0, 2).map(task => { // Pokaż max 2
+                        const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
+                        const isCompleted = task.isCompleted;
+                        return (
+                            <TouchableOpacity 
+                                key={task.id} 
+                                style={[
+                                    styles.allDayTask, 
+                                    { 
+                                        backgroundColor: isCompleted ? '#ccc30' : priorityOption.color + '30', 
+                                        borderColor: isCompleted ? '#aaa' : priorityOption.color 
+                                    }
+                                ]}
+                                onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
+                            >
+                                <Text 
+                                    style={[
+                                        styles.allDayTaskText,
+                                        isCompleted && { textDecorationLine: 'line-through', color: '#666' }
+                                    ]} 
+                                    numberOfLines={1}
+                                >
+                                    {task.icon} {task.name}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                    {allDayTasks.length > 2 && (
+                        <Text style={styles.allDayMoreText}>+{allDayTasks.length - 2} więcej</Text>
+                    )}
+                </View>
+            );
+        };
+
+        return (
+            <View style={styles.timeGridContainer}>
+                {/* Nagłówki Dni nad siatką */}
+                {renderDayHeadersInGrid(daysToRender)}
+                
+                {/* Wiersz z całodniowymi zadaniami (dla każdego dnia w widoku) */}
+                <View style={styles.allDayRow}>
+                    <View style={styles.timeColumn}>
+                        <Text style={styles.allDayLabel}>Cały dzień</Text>
+                    </View>
+                    <ScrollView horizontal>
+                        <View style={styles.daysRow}>
+                            {daysToRender.map(day => (
+                                <View key={toDateString(day)} style={[styles.dayColumn, { height: 'auto', borderBottomWidth: 1, borderBottomColor: '#eee' }]}>
+                                    {renderAllDayTasks(day)}
+                                </View>
+                            ))}
+                        </View>
+                    </ScrollView>
+                </View>
+
+                {/* Siatka czasowa */}
+                <ScrollView contentContainerStyle={styles.timeGridContent}>
+                    <View style={styles.timeGrid}>
+                        {/* Kolumna czasu */}
+                        <View style={styles.timeColumn}>
+                            {hours.map((hour, index) => (
+                                <View key={index} style={styles.timeLabel}>
+                                    <Text style={styles.timeLabelText}>{hour.split(':')[0]}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Kolumny dni (z zadaniami) */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View style={styles.daysRow}>
+                                {daysToRender.map(day => 
+                                    renderDayColumn(day, toDateString(day) === toDateString(new Date()))
+                                )}
+                            </View>
+                        </ScrollView>
+                    </View>
+                </ScrollView>
+            </View>
+        );
+    };
+    
+    // --- NAGŁÓWEK I WIDOKI ---
+
+    const renderHeader = () => {
+        const isToday = toDateString(currentDate) === toDateString(new Date());
+        
+        let title = '';
+        if (viewMode === 'day') {
+            title = currentDate.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+        } else if (viewMode === 'week') {
+            const startDay = weekDays[0];
+            const endDay = weekDays[6];
+            title = `${startDay.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })} - ${endDay.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+        } else if (viewMode === 'agenda') {
+             title = 'Lista zadań';
+        }
+        
+        return (
+            <View style={styles.header}>
+                <View style={styles.dateControlRow}>
+                    <TouchableOpacity onPress={() => changeDate(-1)} style={styles.navButton}>
+                        <Text style={styles.navText}>{'<'}</Text>
+                    </TouchableOpacity>
+
+                    <Text style={[styles.headerTitle, isToday && styles.todayTitle]}>{title}</Text>
+
+                    <TouchableOpacity onPress={() => changeDate(1)} style={styles.navButton}>
+                        <Text style={styles.navText}>{'>'}</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScroll}>
+                    <TouchableOpacity 
+                        onPress={() => handleTagToggle('wszystkie')} 
+                        style={[styles.tagFilter, selectedTags.length === 0 && styles.tagFilterActive]}
+                    >
+                        <Text style={[styles.tagFilterText, selectedTags.length === 0 && styles.tagFilterTextActive]}>Wszystkie</Text>
+                    </TouchableOpacity>
+                    {tags.map(tag => (
+                        <TouchableOpacity 
+                            key={tag}
+                            onPress={() => handleTagToggle(tag)} 
+                            style={[styles.tagFilter, selectedTags.includes(tag) && styles.tagFilterActive]}
+                        >
+                            <Text style={[styles.tagFilterText, selectedTags.includes(tag) && styles.tagFilterTextActive]}>{tag}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+                
+                <View style={styles.viewModeRow}>
+                    {['agenda', 'day', 'week'].map(mode => (
+                        <TouchableOpacity 
+                            key={mode} 
+                            onPress={() => setViewMode(mode)} 
+                            style={[styles.viewModeButton, viewMode === mode && styles.viewModeActive]}
+                        >
+                            <Text style={[styles.viewModeText, viewMode === mode && styles.viewModeTextActive]}>
+                                {mode === 'day' ? 'Dzień' : mode === 'week' ? 'Tydzień' : 'Agenda'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                    {/* KLUCZOWA POPRAWKA ŚCIEŻKI ROUTINGU DLA KALENDARZA MIESIĘCZNEGO */}
+                    <TouchableOpacity 
+                        onPress={() => router.push('/tasks/MonthlyCalendarView')} 
+                        style={styles.calendarButton}
+                    >
+                        <Text style={styles.calendarButtonText}>🗓️</Text>
+                    </TouchableOpacity>
+                    
+                    {/* KLUCZOWA POPRAWKA ŚCIEŻKI ROUTINGU DLA DODAWANIA ZADAŃ */}
+                    <TouchableOpacity 
+                        onPress={() => router.push('/tasks/AddTaskScreen')} 
+                        style={styles.addButton}
+                    >
+                        <Text style={styles.addButtonText}>+</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
+    // --- RENDEROWANIE WIDOKÓW ---
+    const renderAgendaView = () => {
+        const agendaDays = Object.keys(filteredTasks).sort();
+        
+        return (
+            <ScrollView style={styles.agendaContainer}>
+                {agendaDays.length === 0 ? (
+                    <Text style={styles.noTasksText}>Brak zadań w Twojej agendzie.</Text>
+                ) : (
+                    agendaDays.map(dateStr => (
+                        <View key={dateStr} style={styles.agendaDayBlock}>
+                            <Text style={styles.agendaDateTitle}>
+                                {normalizeDate(dateStr).toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </Text>
+                            <View>
+                                {filteredTasks[dateStr].map(renderTaskListItem)}
+                            </View>
+                        </View>
+                    ))
+                )}
+            </ScrollView>
+        );
+    };
+
+    const renderDayWeekView = () => {
+        return (
+            <ScrollView style={styles.dayWeekContainer} horizontal={viewMode === 'week'}>
+                {renderTimeGrid()}
+            </ScrollView>
+        );
+    };
+
 
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {title} ({tasks.length})
-        </Text>
-        {tasks.map(renderTask)}
-      </View>
+        <View style={styles.container}>
+            {renderHeader()}
+            
+            {viewMode === 'agenda' && renderAgendaView()}
+            {(viewMode === 'day' || viewMode === 'week') && renderDayWeekView()}
+        </View>
     );
-  };
-
-  const totalTasks = Object.values(taskCategories).reduce(
-    (sum, tasks) => sum + tasks.length,
-    0
-  );
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Zadania</Text>
-        <Text style={styles.subtitle}>
-          {totalTasks === 0 ? "Brak zadań" : `Łącznie ${totalTasks} zadań`}
-        </Text>
-      </View>
-
-      {/* Filter and Add buttons */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowTagModal(true)}
-        >
-          <Text style={styles.filterButtonText}>
-            🏷️ Filtry {filterTags.length > 0 && `(${filterTags.length})`}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push("/(tabs)/tasks/AddTaskScreen")}
-        >
-          <Text style={styles.addButtonText}>+ Dodaj zadanie</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Active filters display */}
-      {filterTags.length > 0 && (
-        <View style={styles.activeFilters}>
-          <Text style={styles.activeFiltersLabel}>Aktywne filtry:</Text>
-          <View style={styles.filterTagsContainer}>
-            {filterTags.map((tag) => (
-              <View key={tag} style={styles.activeFilterTag}>
-                <Text style={styles.activeFilterText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Tasks list */}
-      <ScrollView style={styles.tasksList}>
-        {totalTasks === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              {filterTags.length > 0
-                ? "Brak zadań pasujących do wybranych filtrów"
-                : "Brak zadań"}
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => router.push("/(tabs)/tasks/AddTaskScreen")}
-            >
-              <Text style={styles.emptyButtonText}>Dodaj pierwsze zadanie</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {renderSection("🚨 Przeterminowane", taskCategories.overdue)}
-            {renderSection("⏰ Dziś", taskCategories.today)}
-            {renderSection("📅 Nadchodzące", taskCategories.upcoming)}
-            {renderSection("✅ Ukończone", taskCategories.completed)}
-          </>
-        )}
-      </ScrollView>
-
-      {/* Tag Filter Modal */}
-      <Modal
-        visible={showTagModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Zarządzaj tagami</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowTagModal(false)}
-            >
-              <Text style={styles.closeButtonText}>Zamknij</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Add new tag */}
-          <View style={styles.addTagSection}>
-            <TextInput
-              style={styles.tagInput}
-              value={newTag}
-              onChangeText={setNewTag}
-              placeholder="Dodaj nowy tag..."
-              onSubmitEditing={handleAddTag}
-              returnKeyType="done"
-            />
-            <TouchableOpacity
-              style={styles.addTagButton}
-              onPress={handleAddTag}
-            >
-              <Text style={styles.addTagButtonText}>Dodaj</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Filter tags */}
-          <Text style={styles.sectionTitleModal}>Filtruj według tagów:</Text>
-          <ScrollView style={styles.tagsContainer}>
-            {tags.map((tag) => (
-              <View key={tag} style={styles.tagRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.filterTag,
-                    filterTags.includes(tag) && styles.filterTagSelected,
-                  ]}
-                  onPress={() => toggleFilterTag(tag)}
-                >
-                  <Text
-                    style={[
-                      styles.filterTagText,
-                      filterTags.includes(tag) && styles.filterTagTextSelected,
-                    ]}
-                  >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteTagButton}
-                  onPress={() => handleDeleteTag(tag)}
-                >
-                  <Text style={styles.deleteTagText}>🗑️</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
-  );
 }
 
+// -------------------------------------------------------------------
+// --- STYLE ---
+// -------------------------------------------------------------------
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    padding: 15,
-    gap: 10,
-  },
-  filterButton: {
-    flex: 1,
-    backgroundColor: "#e0e0e0",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  filterButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-  },
-  addButton: {
-    flex: 1,
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  activeFilters: {
-    paddingHorizontal: 15,
-    paddingBottom: 10,
-  },
-  activeFiltersLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 5,
-  },
-  filterTagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  activeFilterTag: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  activeFilterText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-  tasksList: {
-    flex: 1,
-    padding: 15,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  emptyButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  emptyButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  taskItem: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderLeftWidth: 4,
-  },
-  taskCompleted: {
-    backgroundColor: "#f9f9f9",
-    opacity: 0.7,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  taskName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    flex: 1,
-    marginRight: 8,
-  },
-  taskNameCompleted: {
-    textDecorationLine: "line-through",
-    color: "#666",
-  },
-  deadlineText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  taskTags: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  taskTag: {
-    backgroundColor: "#e0e0e0",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  taskActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 12,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  checkboxCompleted: {
-    backgroundColor: "#34C759",
-    borderColor: "#34C759",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  deleteButtonText: {
-    fontSize: 16,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: "#007AFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  addTagSection: {
-    flexDirection: "row",
-    padding: 15,
-    backgroundColor: "#fff",
-    marginBottom: 20,
-  },
-  tagInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
-    backgroundColor: "#fff",
-  },
-  addTagButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addTagButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  sectionTitleModal: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
-    paddingHorizontal: 15,
-    marginBottom: 10,
-  },
-  tagsContainer: {
-    flex: 1,
-    paddingHorizontal: 15,
-  },
-  tagRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  filterTag: {
-    flex: 1,
-    backgroundColor: "#e0e0e0",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  filterTagSelected: {
-    backgroundColor: "#007AFF",
-  },
-  filterTagText: {
-    color: "#000",
-    fontSize: 16,
-  },
-  filterTagTextSelected: {
-    color: "#fff",
-  },
-  deleteTagButton: {
-    padding: 8,
-  },
-  deleteTagText: {
-    fontSize: 18,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    header: {
+        paddingTop: Platform.OS === 'ios' ? HEADER_HEIGHT_PADDING : 10,
+        paddingHorizontal: 15,
+        backgroundColor: '#f9f9f9',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    dateControlRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    headerTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    todayTitle: {
+        color: '#007AFF',
+    },
+    navButton: {
+        padding: 10,
+    },
+    navText: {
+        fontSize: 24,
+        color: '#007AFF',
+        fontWeight: '300',
+    },
+    viewModeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    viewModeButton: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
+        marginHorizontal: 5,
+    },
+    viewModeText: {
+        color: '#8e8e93',
+        fontWeight: '600',
+    },
+    viewModeActive: {
+        borderBottomColor: '#007AFF',
+    },
+    viewModeTextActive: {
+        color: '#007AFF',
+    },
+    calendarButton: {
+        padding: 8,
+        marginLeft: 10,
+    },
+    calendarButtonText: {
+        fontSize: 20,
+    },
+    addButton: {
+        backgroundColor: '#34C759',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 10,
+    },
+    addButtonText: {
+        color: '#fff',
+        fontSize: 20,
+        lineHeight: 20,
+    },
+    tagsScroll: {
+        marginBottom: 10,
+        maxHeight: 40,
+    },
+    tagFilter: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        marginRight: 8,
+    },
+    tagFilterText: {
+        color: '#333',
+        fontSize: 14,
+    },
+    tagFilterActive: {
+        backgroundColor: '#007AFF',
+    },
+    tagFilterTextActive: {
+        color: '#fff',
+    },
+    // --- Agenda Styles ---
+    agendaContainer: {
+        flex: 1,
+        paddingHorizontal: 15,
+        paddingTop: 10,
+    },
+    agendaDayBlock: {
+        marginBottom: 20,
+    },
+    agendaDateTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#007AFF',
+        marginBottom: 10,
+    },
+    taskItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 8,
+        borderLeftWidth: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+        elevation: 2,
+    },
+    taskContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    taskIcon: {
+        fontSize: 24,
+        marginRight: 10,
+    },
+    taskDetails: {
+        flex: 1,
+    },
+    taskName: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    taskMeta: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 4,
+    },
+    taskTime: {
+        fontSize: 12,
+        marginRight: 10,
+    },
+    taskTag: {
+        fontSize: 12,
+        color: '#8e8e93',
+        marginRight: 8,
+    },
+    completeButton: {
+        padding: 5,
+        marginLeft: 10,
+        backgroundColor: '#34C759',
+        borderRadius: 15,
+        width: 30,
+        height: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    completeButtonText: {
+        color: '#fff',
+        fontSize: 18,
+    },
+    
+    // ---------------------------------------------
+    // ✅ STYLE DLA UKOŃCZONYCH ZADAŃ
+    // ---------------------------------------------
+    taskItemCompleted: {
+        opacity: 0.5,
+        backgroundColor: '#f5f5f5',
+    },
+    taskNameCompleted: {
+        textDecorationLine: 'line-through',
+        color: '#8e8e93',
+    },
+    completeButtonCompleted: {
+        backgroundColor: '#ccc', // Szary przycisk dla ukończonego zadania
+    },
+    // ---------------------------------------------
+    
+    noTasksText: {
+        textAlign: 'center',
+        marginTop: 50,
+        fontSize: 16,
+        color: '#8e8e93',
+    },
+    // --- Day/Week Grid Styles ---
+    dayWeekContainer: {
+        flex: 1,
+    },
+    timeGridContainer: {
+        flex: 1,
+    },
+    // ---------------------------------------------
+    // ✅ STYLE DLA NAGŁÓWKÓW WIDOKU DAY/WEEK
+    // ---------------------------------------------
+    dayHeaderRowGrid: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        minHeight: 50,
+    },
+    timeHeaderPlaceholder: {
+        width: TIME_COLUMN_WIDTH,
+        borderRightWidth: 1,
+        borderRightColor: '#eee',
+    },
+    dayHeaderGrid: {
+        width: DAY_COLUMN_WIDTH,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 5,
+    },
+    todayHeaderGrid: {
+        backgroundColor: '#e6f2ff', // Jasnoniebieski dla dzisiejszego dnia
+    },
+    dayHeaderDateGrid: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    dayHeaderTextGrid: {
+        fontSize: 12,
+        color: '#888',
+    },
+    todayHeaderTextGrid: {
+        color: '#007AFF',
+    },
+    // ---------------------------------------------
+    allDayRow: {
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        minHeight: 40,
+    },
+    allDayLabel: {
+        fontSize: 12,
+        color: '#888',
+        paddingHorizontal: 5,
+        paddingVertical: 10,
+        fontWeight: 'bold',
+        textAlign: 'right',
+    },
+    allDayContainer: {
+        paddingHorizontal: 5,
+        paddingVertical: 5,
+    },
+    allDayTask: {
+        padding: 2,
+        borderRadius: 4,
+        marginBottom: 2,
+        borderLeftWidth: 3,
+    },
+    allDayTaskText: {
+        fontSize: 12,
+        color: '#333',
+    },
+    allDayMoreText: {
+        fontSize: 10,
+        color: '#666',
+    },
+    timeGridContent: {
+        paddingBottom: 20, // Dodatkowy padding na dole siatki
+    },
+    timeGrid: {
+        flexDirection: 'row',
+    },
+    timeColumn: {
+        width: TIME_COLUMN_WIDTH,
+        paddingTop: 0, 
+    },
+    timeLabel: {
+        height: HOUR_HEIGHT,
+        alignItems: 'flex-end',
+        justifyContent: 'flex-start', 
+        paddingRight: 5,
+        paddingTop: 5, 
+    },
+    timeLabelText: {
+        fontSize: 12,
+        color: '#aaa',
+        transform: [{ translateY: 0 }], 
+    },
+    daysRow: {
+        flexDirection: 'row',
+        width: TOTAL_DAYS_WIDTH, 
+    },
+    dayColumn: {
+        width: DAY_COLUMN_WIDTH, 
+        height: HOUR_HEIGHT * (USER_ACTIVE_HOURS_END - USER_ACTIVE_HOURS_START + 1), 
+        borderRightWidth: 1,
+        borderRightColor: '#eee',
+        position: 'relative',
+    },
+    todayColumn: {
+        backgroundColor: '#fafafa', 
+    },
+    gridLine: {
+        height: HOUR_HEIGHT,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    gridTask: {
+        position: 'absolute',
+        left: 2,
+        right: 2,
+        padding: 4,
+        borderRadius: 4,
+        borderLeftWidth: 3,
+        zIndex: 10,
+        overflow: 'hidden',
+    },
+    gridTaskText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    gridTaskTime: {
+        fontSize: 10,
+        color: '#666',
+    }
 });

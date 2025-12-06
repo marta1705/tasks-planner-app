@@ -2,15 +2,14 @@ import { useRouter } from "expo-router";
 import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import React from "react";
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 export default function LoginScreen() {
@@ -26,28 +25,21 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const validateForm = () => {
-    // Sprawdź format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Nieprawidłowy adres email");
       return false;
     }
-
-    // Sprawdź czy hasło jest wypełnione
     if (!password) {
       setError("Proszę podać hasło");
       return false;
     }
-
     return true;
   };
 
   const handleLogin = () => {
     setError("");
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
@@ -62,7 +54,6 @@ export default function LoginScreen() {
         console.log("User logged in:", user.email);
       })
       .catch((error) => {
-        // Obsługa błędów Firebase
         switch (error.code) {
           case "auth/invalid-email":
             setError("Nieprawidłowy adres email");
@@ -123,11 +114,14 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View>
           <Text style={styles.title}>Witaj</Text>
 
           {error ? (
@@ -235,7 +229,7 @@ export default function LoginScreen() {
           )}
 
         </View>
-      </TouchableWithoutFeedback>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

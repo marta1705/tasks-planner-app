@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Video } from "expo-av";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Animated,
   Image,
-  TouchableOpacity,
-  TextInput,
-  Modal,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { usePet } from "../context/PetContext";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function PetWidget() {
   const {
@@ -22,26 +24,133 @@ export default function PetWidget() {
     petImage,
     updatePetImage,
   } = usePet();
+
   const petStatus = getPetStatus();
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(petName);
   const [showPetSelector, setShowPetSelector] = useState(false);
 
-  const handleSaveName = () => {
-    if (tempName.trim()) {
-      updatePetName(tempName.trim());
-    }
-    setIsEditingName(false);
+  // fade animation
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const fadeIn = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
   };
 
+  const fadeOut = (callback) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => callback && callback());
+  };
+
+  // pet options
   const petOptions = [
-    { id: 1, name: "Pies", image: require("../assets/images/dog.png") },
-    { id: 2, name: "Kot", image: require("../assets/images/cat.png") },
+    {
+      id: 1,
+      name: "Piesek",
+      image: require("../assets/images/dog/starting_position/dog_starting_position.png"),
+      animations: [
+        require("../assets/images/dog/starting_position/video1_dog_starting_position.mp4"),
+        require("../assets/images/dog/starting_position/video2_dog_starting_position.mp4"),
+        require("../assets/images/dog/starting_position/video3_dog_starting_position.mp4"),
+        require("../assets/images/dog/starting_position/video4_dog_starting_position.mp4"),
+      ],
+    },
+    {
+      id: 2,
+      name: "Kotek",
+      image: require("../assets/images/cat/starting_position/cat_starting_position.png"),
+      animations: [
+        require("../assets/images/cat/starting_position/video1_cat_starting_position.mp4"),
+        require("../assets/images/cat/starting_position/video2_cat_starting_position.mp4"),
+        require("../assets/images/cat/starting_position/video3_cat_starting_position.mp4"),
+        require("../assets/images/cat/starting_position/video4_cat_starting_position.mp4"),
+      ],
+    },
+    {
+      id: 3,
+      name: "Kapibara",
+      image: require("../assets/images/capybara/starting_position/capybara_starting_position.png"),
+      animations: [
+        require("../assets/images/capybara/starting_position/video1_capybara_starting_position.mp4"),
+        require("../assets/images/capybara/starting_position/video2_capybara_starting_position.mp4"),
+        require("../assets/images/capybara/starting_position/video3_capybara_starting_position.mp4"),
+        require("../assets/images/capybara/starting_position/video4_capybara_starting_position.mp4"),
+      ],
+    },
+    {
+      id: 4,
+      name: "Kaczuszka",
+      image: require("../assets/images/duck/starting_position/duck_starting_position.png"),
+      animations: [
+        require("../assets/images/duck/starting_position/video1_duck_starting_position.mp4"),
+        require("../assets/images/duck/starting_position/video2_duck_starting_position.mp4"),
+        require("../assets/images/duck/starting_position/video3_duck_starting_position.mp4"),
+        require("../assets/images/duck/starting_position/video4_duck_starting_position.mp4"),
+      ],
+    },
+    {
+      id: 5,
+      name: "Rybka",
+      image: require("../assets/images/fish/starting_position/fish_starting_position.png"),
+      animations: [
+        require("../assets/images/fish/starting_position/video1_fish_starting_position.mp4"),
+        require("../assets/images/fish/starting_position/video2_fish_starting_position.mp4"),
+        require("../assets/images/fish/starting_position/video3_fish_starting_position.mp4"),
+        require("../assets/images/fish/starting_position/video4_fish_starting_position.mp4"),
+      ],
+    },
   ];
 
+  const currentPet = petOptions.find((p) => p.image === petImage) || petOptions[0];
+
+  const [animationStep, setAnimationStep] = useState(0);
+  const [currentAnimationIndex, setCurrentAnimationIndex] = useState(0);
+
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (animationStep === 0) {
+      const timer = setTimeout(() => {
+        fadeOut(() => {
+          setAnimationStep(1);
+          fadeIn();
+        });
+      }, 2800);
+      return () => clearTimeout(timer);
+    }
+  }, [animationStep]);
+
+  const handleAnimationEnd = () => {
+    fadeOut(() => {
+      setAnimationStep(0);
+      setCurrentAnimationIndex((prev) =>
+        prev + 1 < currentPet.animations.length ? prev + 1 : 0
+      );
+      fadeIn();
+    });
+  };
+
   const handleSelectPet = (petOption) => {
-    updatePetImage(petOption.image);
-    setShowPetSelector(false);
+    fadeOut(() => {
+      updatePetImage(petOption.image);
+      setCurrentAnimationIndex(0);
+      setAnimationStep(0);
+      setShowPetSelector(false);
+      fadeIn();
+    });
+  };
+
+  const handleSaveName = () => {
+    if (tempName.trim()) updatePetName(tempName.trim());
+    setIsEditingName(false);
   };
 
   return (
@@ -49,18 +158,39 @@ export default function PetWidget() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <Image source={petImage} style={styles.petImage} resizeMode="contain" />
+      {/* Pet image / video */}
+      <Animated.View style={{ opacity: fadeAnim }}>
+        {animationStep === 0 ? (
+          <Image source={petImage} style={styles.petImage} resizeMode="contain" />
+        ) : (
+          <View style={styles.videoContainer}>
+            <Video
+              ref={videoRef}
+              source={currentPet.animations[currentAnimationIndex]}
+              style={styles.videoFull}
+              isMuted
+              resizeMode="cover"
+              shouldPlay
+              useNativeControls={false}
+              onPlaybackStatusUpdate={(status) => {
+                if (status.didJustFinish) handleAnimationEnd();
+              }}
+            />
+          </View>
+        )}
+      </Animated.View>
 
+      {/* Kwadratowy przycisk zmiany pupila */}
       <View style={styles.petSelectorButtonContainer}>
         <TouchableOpacity
-          style={styles.petSelectorButton}
+          style={styles.petSelectorButtonSquare}
           onPress={() => setShowPetSelector(true)}
         >
-          <MaterialIcons name="edit" size={20} color="#fff" />
-          <Text style={styles.petSelectorText}>Zmień pupila</Text>
+          <MaterialIcons name="edit" size={28} color="#333" />
         </TouchableOpacity>
       </View>
 
+      {/* Pet card */}
       <View style={styles.card}>
         <View style={styles.nameContainer}>
           {isEditingName ? (
@@ -72,12 +202,8 @@ export default function PetWidget() {
                 autoFocus
                 maxLength={20}
                 onSubmitEditing={handleSaveName}
-                returnKeyType="done"
               />
-              <TouchableOpacity
-                onPress={handleSaveName}
-                style={styles.saveButton}
-              >
+              <TouchableOpacity onPress={handleSaveName} style={styles.saveButton}>
                 <MaterialIcons name="check" size={24} color="#4CAF50" />
               </TouchableOpacity>
             </View>
@@ -97,249 +223,113 @@ export default function PetWidget() {
           )}
         </View>
 
+        {/* Health bar */}
         <View style={styles.healthBarContainer}>
           <View style={styles.healthBarBackground}>
             <View
               style={[
                 styles.healthBarFill,
-                {
-                  width: `${petHealth}%`,
-                  backgroundColor: petStatus.color,
-                },
+                { width: `${petHealth}%`, backgroundColor: petStatus.color },
               ]}
             />
           </View>
           <Text style={styles.healthText}>{petHealth}/100</Text>
         </View>
 
+        {/* Modal wyboru pupila */}
         <Modal
-          visible={showPetSelector}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowPetSelector(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Wybierz swojego pupila</Text>
+  visible={showPetSelector}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowPetSelector(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Wybierz pupila</Text>
+      <View style={styles.petGrid}>
+        {petOptions.map((pet) => (
+          <TouchableOpacity
+            key={pet.id}
+            style={styles.petOption}
+            onPress={() => handleSelectPet(pet)}
+          >
+            <Image
+              source={pet.image}
+              style={styles.petOptionImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.petOptionName}>{pet.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TouchableOpacity
+        style={styles.closeModalButton}
+        onPress={() => setShowPetSelector(false)}
+      >
+        <Text style={styles.closeModalText}>Anuluj</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
-              <View style={styles.petGrid}>
-                {petOptions.map((pet) => (
-                  <TouchableOpacity
-                    key={pet.id}
-                    style={styles.petOption}
-                    onPress={() => handleSelectPet(pet)}
-                  >
-                    <Image
-                      source={pet.image}
-                      style={styles.petOptionImage}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.petOptionName}>{pet.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={() => setShowPetSelector(false)}
-              >
-                <Text style={styles.closeModalText}>Anuluj</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: "100%",
-    paddingHorizontal: 20,
-    marginVertical: 20,
-    alignItems: "center",
-  },
-  card: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  petImage: {
-    width: 300,
-    height: 300,
-    marginBottom: 10,
-  },
-  editImageBadge: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    backgroundColor: "#007AFF",
-    borderRadius: 12,
-    padding: 4,
-    zIndex: 1,
-  },
-  nameContainer: {
-    marginBottom: 15,
-    width: "100%",
-    alignItems: "center",
-  },
-  nameDisplayContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  nameEditContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  nameInput: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    borderBottomWidth: 2,
-    borderBottomColor: "#007AFF",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    minWidth: 150,
-    textAlign: "center",
-  },
-  editButton: {
-    padding: 4,
-  },
-  saveButton: {
-    padding: 4,
-  },
-  petName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
-  },
-  healthBarContainer: {
-    width: "100%",
-    marginBottom: 15,
-  },
-  healthBarBackground: {
-    width: "100%",
-    height: 24,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  healthBarFill: {
-    height: "100%",
-    borderRadius: 12,
-    transition: "width 0.3s ease",
-  },
-  healthText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-    textAlign: "center",
-  },
-  statusText: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  motivationText: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 24,
-    width: "85%",
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  petGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    gap: 15,
-    marginBottom: 20,
-  },
-  petOption: {
-    alignItems: "center",
-    padding: 15,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 15,
-    width: "45%",
-  },
-  petOptionImage: {
-    width: 80,
-    height: 80,
-    marginBottom: 8,
-  },
-  petOptionName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  closeModalButton: {
-    backgroundColor: "#f0f0f0",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  closeModalText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-  },
-  petSelectorButtonContainer: {
-    width: "100%",
-    alignItems: "flex-end",
-    marginTop: -10, // lekko pod zdjęciem
-    marginBottom: 10,
-    paddingRight: 20,
-  },
+  container: { width: "100%", paddingHorizontal: 20, marginVertical: 20, alignItems: "center" },
+  card: { width: "100%", backgroundColor: "#fff", borderRadius: 20, padding: 20, alignItems: "center", elevation: 5 },
+  petImage: { width: 300, height: 300, borderRadius: 20 },
+  videoContainer: { width: 300, height: 300, borderRadius: 20, overflow: "hidden" },
+  videoFull: { ...StyleSheet.absoluteFillObject },
+  petSelectorButtonContainer: { width: "100%", alignItems: "flex-end", marginBottom: 10, paddingRight: 20 },
+  petSelectorButtonSquare: { width: 60, height: 60, backgroundColor: "#f5f5f5", borderRadius: 15, justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 },
+  nameContainer: { marginBottom: 15, width: "100%", alignItems: "center" },
+  nameDisplayContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  nameEditContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
+  nameInput: { fontSize: 24, fontWeight: "bold", borderBottomWidth: 2, borderBottomColor: "#007AFF", minWidth: 150, textAlign: "center" },
+  petName: { fontSize: 24, fontWeight: "bold", marginBottom: 15 },
+  healthBarContainer: { width: "100%", marginBottom: 15 },
+  healthBarBackground: { width: "100%", height: 24, backgroundColor: "#E0E0E0", borderRadius: 12, overflow: "hidden" },
+  healthBarFill: { height: "100%", borderRadius: 12 },
+  healthText: { textAlign: "center", marginTop: 6 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalContent: { backgroundColor: "#fff", borderRadius: 20, padding: 24, width: "80%" },
+  modalTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
+  petGrid: { 
+  flexDirection: "row", 
+  flexWrap: "wrap", 
+  justifyContent: "space-between", 
+  marginBottom: 20, 
+  gap: 15 
+},
+petOption: { 
+  width: 120, 
+  height: 120, 
+  backgroundColor: "#f5f5f5", 
+  borderRadius: 15, 
+  justifyContent: "center", 
+  alignItems: "center", 
+  marginBottom: 15,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 2,
+},
+petOptionImage: { width: 60, height: 60, marginBottom: 8 },
+petOptionName: { fontSize: 14, fontWeight: "600", textAlign: "center" },
 
-  petSelectorButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007AFF",
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
+closeModalButton: {
+  backgroundColor: "#007AFF",
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 15,
+  alignItems: "center",
+  marginTop: 10,
+  alignSelf: "center"
+},
+closeModalText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 
-  petSelectorText: {
-    color: "#fff",
-    fontWeight: "600",
-    marginLeft: 6,
-    fontSize: 14,
-  },
 });
