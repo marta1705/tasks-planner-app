@@ -52,6 +52,7 @@ export default function LoginScreen() {
         }
 
         console.log("User logged in:", user.email);
+        //router.replace("/");
       })
       .catch((error) => {
         switch (error.code) {
@@ -184,52 +185,50 @@ export default function LoginScreen() {
               Nie masz konta? Zarejestruj się
             </Text>
           </TouchableOpacity>
-
-
-
-          {/* Modal resetu hasła*/}
-          {resetModalVisible && (
-            <View style={styles.resetOverlay}>
-              <View style={styles.resetBox}>
-                <Text style={styles.resetTitle}>Reset hasła</Text>
-
-                {resetError ? (
-                  <Text style={styles.resetError}>⚠️ {resetError}</Text>
-                ) : null}
-
-                <TextInput
-                  placeholder="Podaj email"
-                  value={resetEmail}
-                  onChangeText={setResetEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={styles.resetInput}
-                />
-
-                <View style={styles.resetButtons}>
-                  <TouchableOpacity
-                    style={[styles.resetButton, { backgroundColor: "#ccc" }]}
-                    onPress={() => setResetModalVisible(false)}
-                  >
-                    <Text>Anuluj</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.resetButton, { backgroundColor: "#007AFF" }]}
-                    onPress={handlePasswordReset}
-                    disabled={resetLoading}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "600" }}>
-                      {resetLoading ? "Wysyłanie..." : "Wyślij link"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-
         </View>
       </ScrollView>
+
+
+      {/* Modal resetu hasła*/}
+      {resetModalVisible && (
+        <View style={styles.resetOverlay}>
+          <View style={styles.resetBox}>
+            <Text style={styles.resetTitle}>Reset hasła</Text>
+
+            {resetError ? (
+              <Text style={styles.resetError}>⚠️ {resetError}</Text>
+            ) : null}
+
+            <TextInput
+              placeholder="Podaj email"
+              value={resetEmail}
+              onChangeText={setResetEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={styles.resetInput}
+            />
+
+            <View style={styles.resetButtons}>
+              <TouchableOpacity
+                style={[styles.resetButton, { backgroundColor: "#ccc" }]}
+                onPress={() => setResetModalVisible(false)}
+              >
+                <Text>Anuluj</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.resetButton, { backgroundColor: "#007AFF" }]}
+                onPress={handlePasswordReset}
+                disabled={resetLoading}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                  {resetLoading ? "Wysyłanie..." : "Wyślij link"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

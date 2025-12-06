@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } 
 import { doc, setDoc } from "firebase/firestore";
 import React from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from "react-native";
 import { useAuth } from '../context/AuthContext';

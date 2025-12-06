@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -8,6 +8,7 @@ import "../services/firebase";
 function RootLayoutNav() {
   const { isAuthenticated, loading, registering } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
     if (loading || registering) return; // jeśli stan autentykacji jest w trakcie ładowania, nie zostana wykonane zadne przekierowania
