@@ -35,6 +35,36 @@ const DAY_COLUMN_WIDTH = TOTAL_DAYS_WIDTH / 7;
 const HOUR_HEIGHT = 60;
 
 // -------------------------------------------------------------------
+// 🔥🔥🔥 NOWA LOGIKA PRZETERMINOWANIA 🔥🔥🔥
+// -------------------------------------------------------------------
+
+/**
+ * Sprawdza, czy zadanie jest uznane za "przeterminowane" (dla logiki smaczków),
+ * biorąc pod uwagę 1-godzinny bufor czasowy (3 600 000 milisekund).
+ *
+ * @param {string} dateString Data zadania (YYYY-MM-DD).
+ * @param {string} timeString Czas zadania (HH:MM).
+ * @returns {boolean} Zwraca true, jeśli minęła godzina od terminu zadania.
+ */
+const isTaskFullyOverdue = (dateString, timeString) => {
+    if (!dateString || !timeString) return false;
+    
+    // Tworzenie terminu zadania (Date)
+    const deadline = combineDateTime(dateString, timeString);
+    if (!deadline) return false;
+    
+    // Dodanie bufora 1 godziny (60 minut * 60 sekund * 1000 milisekund)
+    const OVERDUE_BUFFER_MS = 60 * 60 * 1000;
+    const overdueThresholdTime = deadline.getTime() + OVERDUE_BUFFER_MS;
+
+    // Pobranie aktualnego czasu
+    const now = new Date(); 
+
+    // Sprawdzenie, czy minął czas bufora
+    return now.getTime() > overdueThresholdTime;
+};
+
+// -------------------------------------------------------------------
 // ✅ POPRAWKA 1: toDateString używa lokalnych komponentów
 // -------------------------------------------------------------------
 const toDateString = (date) => {
@@ -65,7 +95,7 @@ const normalizeDate = (dateStr) => {
 const combineDateTime = (dateString, timeString) => {
     if (!dateString || !timeString) return null;
     
-    // Używamy normalizeDate, aby upewnić się, że data bazowa jest poprawna
+    // Używamy normalizeDate, aby upewnić się, że data bazowa jest poprawna (YYYY-MM-DD 00:00:00)
     const baseDate = normalizeDate(dateString); 
     if (!baseDate) return null;
     
@@ -84,8 +114,11 @@ const combineDateTime = (dateString, timeString) => {
 
 export default function TasksIndex() {
     const router = useRouter();
-    const { tasks, completeTask, deleteTask } = useTasks();
+    // Tutaj brakuje nam PetWidget i logiki smaczków, ale to jest inny komponent/kontekst
+    const { tasks, completeTask, deleteTask } = useTasks(); 
     const { tags } = useTags();
+
+    // ... (pozostały kod stanu i nawigacji)
 
     // Wczytanie daty z parametrów (jeśli przekazano z widoku miesięcznego)
     const urlParams = router.params || {};
@@ -147,16 +180,14 @@ export default function TasksIndex() {
             result = result.filter(task => {
                 if (!task.isCompleted) return true; // Zawsze pokazuj nieukończone
                 
-                // Pokaż ukończone, jeśli ich data rozpoczęcia jest dziś (lub deadline, jeśli to całodniowe)
+                // ZMIANA: Pokazujemy ukończone, jeśli ich data rozpoczęcia (lub deadline) jest DZIŚ lub w przyszłości
                 const taskDate = normalizeDate(task.startDate);
+                const deadlineDate = normalizeDate(task.deadline);
                 
-                // Jeśli data rozpoczęcia jest DZIŚ
-                if (taskDate && taskDate.getTime() === todayNormalized.getTime()) return true;
-
-                // Sprawdź zadania całodniowe: jeśli ich deadline jest dzisiaj lub w przyszłości
-                if (task.isAllDay) {
-                    const deadlineDate = normalizeDate(task.deadline);
-                    if (deadlineDate && deadlineDate >= todayNormalized) return true;
+                if ((taskDate && taskDate.getTime() === todayNormalized.getTime()) ||
+                    (task.isAllDay && deadlineDate && deadlineDate >= todayNormalized)) 
+                {
+                    return true;
                 }
                 
                 return false; // Ukryj zadania ukończone w przeszłości
@@ -278,8 +309,10 @@ export default function TasksIndex() {
     const renderTaskListItem = (task) => {
         const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
 
-        // DODANO: Sprawdzenie, czy zadanie jest ukończone
         const isCompleted = task.isCompleted;
+        // 🔥🔥🔥 NOWA LOGIKA PRZETERMINOWANIA W RENDEROWANIU 🔥🔥🔥
+        const isFullyOverdue = !isCompleted && isTaskFullyOverdue(task.startDate, task.endTime);
+
 
         return (
             <TouchableOpacity 
@@ -287,20 +320,41 @@ export default function TasksIndex() {
                 style={[
                     styles.taskItem, 
                     { borderLeftColor: priorityOption.color },
-                    isCompleted && styles.taskItemCompleted 
+                    isCompleted && styles.taskItemCompleted,
+                    // Styl dla zadania w pełni przeterminowanego (kara smaczkowa)
+                    isFullyOverdue && styles.taskItemOverdue 
                 ]}
+                // WIDOK EDYCJI
                 onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
             >
                 <View style={styles.taskContent}>
+                    {/* PRZYCISK UKOŃCZENIA - Teraz jako checkbox/toggle */}
+                    <TouchableOpacity 
+                        onPress={() => completeTask(task.id, !isCompleted)} // Przełączanie stanu
+                        style={[
+                            styles.completeButton, 
+                            { backgroundColor: isCompleted ? '#34C759' : '#e0e0e0', borderColor: isCompleted ? '#34C759' : '#ccc' }
+                        ]} 
+                    >
+                        {/* W widoku agendy/listy wstawiamy '✓' jeśli jest completed */}
+                        <Text style={styles.completeButtonText}>{isCompleted ? '✓' : ''}</Text>
+                    </TouchableOpacity>
+
                     <Text style={styles.taskIcon}>{task.icon}</Text>
+                    
                     <View style={styles.taskDetails}>
                         <Text 
-                            style={[styles.taskName, isCompleted && styles.taskNameCompleted]} 
+                            style={[
+                                styles.taskName, 
+                                isCompleted && styles.taskNameCompleted,
+                                isFullyOverdue && styles.taskNameOverdue
+                            ]} 
                         >
-                            {task.name}
+                            {isFullyOverdue ? '⚠️ ' : ''}{task.name}
+                            {task.isRecurring && <Text style={{ fontSize: 12, color: '#007AFF' }}> (cykliczne)</Text>}
                         </Text>
                         <View style={styles.taskMeta}>
-                            <Text style={[styles.taskTime, { color: priorityOption.color }]}>
+                            <Text style={[styles.taskTime, { color: isCompleted ? '#8e8e93' : priorityOption.color }]}>
                                 {task.isAllDay ? 'Cały dzień' : `${task.startTime} - ${task.endTime}`}
                             </Text>
                             {task.tags?.map(tag => (
@@ -309,13 +363,6 @@ export default function TasksIndex() {
                         </View>
                     </View>
                 </View>
-                <TouchableOpacity 
-                    onPress={() => completeTask(task.id)} 
-                    style={[styles.completeButton, isCompleted && styles.completeButtonCompleted]} 
-                >
-                    {/* W widoku agendy/listy wstawiamy '✓' jeśli jest completed */}
-                    <Text style={styles.completeButtonText}>{isCompleted ? '✓' : ''}</Text>
-                </TouchableOpacity>
             </TouchableOpacity>
         );
     };
@@ -376,6 +423,9 @@ export default function TasksIndex() {
 
             const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
             const isCompleted = task.isCompleted;
+            // 🔥🔥🔥 NOWA LOGIKA PRZETERMINOWANIA W SIATCE 🔥🔥🔥
+            const isFullyOverdue = !isCompleted && isTaskFullyOverdue(task.startDate, task.endTime);
+
 
             return (
                 <TouchableOpacity
@@ -389,7 +439,9 @@ export default function TasksIndex() {
                             backgroundColor: isCompleted ? '#ccc30' : priorityOption.color + '30',
                             borderColor: isCompleted ? '#aaa' : priorityOption.color,
                             opacity: isCompleted ? 0.7 : 1,
-                        }
+                        },
+                        // Styl dla zadania w pełni przeterminowanego (kara smaczkowa)
+                        isFullyOverdue && styles.gridTaskOverdue 
                     ]}
                     onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
                 >
@@ -400,7 +452,7 @@ export default function TasksIndex() {
                         ]} 
                         numberOfLines={2}
                     >
-                        {task.icon} {task.name}
+                        {isFullyOverdue ? '⚠️ ' : ''}{task.icon} {task.name}
                     </Text>
                     <Text style={styles.gridTaskTime}>{task.startTime}-{task.endTime}</Text>
                 </TouchableOpacity>
@@ -442,6 +494,10 @@ export default function TasksIndex() {
                     {allDayTasks.slice(0, 2).map(task => { // Pokaż max 2
                         const priorityOption = PRIORITY_OPTIONS.find(p => p.value === task.priority) || PRIORITY_OPTIONS[0];
                         const isCompleted = task.isCompleted;
+                        // 🔥🔥🔥 NOWA LOGIKA PRZETERMINOWANIA DLA CAŁODNIOWYCH 🔥🔥🔥
+                        // Zadania całodniowe używają task.deadline jako momentu, po którym sprawdzamy +1h bufor
+                        const isFullyOverdue = !isCompleted && isTaskFullyOverdue(task.deadline || task.startDate, '23:59'); 
+                        
                         return (
                             <TouchableOpacity 
                                 key={task.id} 
@@ -450,7 +506,9 @@ export default function TasksIndex() {
                                     { 
                                         backgroundColor: isCompleted ? '#ccc30' : priorityOption.color + '30', 
                                         borderColor: isCompleted ? '#aaa' : priorityOption.color 
-                                    }
+                                    },
+                                    // Styl dla zadania w pełni przeterminowanego (kara smaczkowa)
+                                    isFullyOverdue && styles.allDayTaskOverdue
                                 ]}
                                 onPress={() => router.push({ pathname: '/tasks/EditTaskScreen', params: { taskId: task.id } })}
                             >
@@ -461,7 +519,7 @@ export default function TasksIndex() {
                                     ]} 
                                     numberOfLines={1}
                                 >
-                                    {task.icon} {task.name}
+                                    {isFullyOverdue ? '⚠️ ' : ''}{task.icon} {task.name}
                                 </Text>
                             </TouchableOpacity>
                         );
@@ -764,7 +822,7 @@ const styles = StyleSheet.create({
     taskItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start', // Zmiana na start, aby przesunąć content
         backgroundColor: '#fff',
         padding: 12,
         borderRadius: 8,
@@ -806,34 +864,43 @@ const styles = StyleSheet.create({
         color: '#8e8e93',
         marginRight: 8,
     },
+    
+    // ZMIENIONE STYLE PRZYCISKU UKOŃCZENIA (CHECKBOX)
     completeButton: {
         padding: 5,
-        marginLeft: 10,
-        backgroundColor: '#34C759',
-        borderRadius: 15,
-        width: 30,
-        height: 30,
+        marginRight: 15, // Odstęp od ikony zadania
+        borderRadius: 5,
+        width: 28,
+        height: 28,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 2,
     },
     completeButtonText: {
         color: '#fff',
         fontSize: 18,
+        fontWeight: 'bold',
     },
     
     // ---------------------------------------------
     // ✅ STYLE DLA UKOŃCZONYCH ZADAŃ
     // ---------------------------------------------
     taskItemCompleted: {
-        opacity: 0.5,
-        backgroundColor: '#f5f5f5',
+        opacity: 0.7,
+        backgroundColor: '#f9f9f9',
     },
     taskNameCompleted: {
         textDecorationLine: 'line-through',
         color: '#8e8e93',
     },
-    completeButtonCompleted: {
-        backgroundColor: '#ccc', // Szary przycisk dla ukończonego zadania
+    // 🔥🔥🔥 STYLE DLA W PEŁNI PRZETERMINOWANYCH ZADAŃ 🔥🔥🔥
+    taskItemOverdue: {
+        backgroundColor: '#FFEBEE', // Bardziej widoczne tło (jasnoczerwone)
+        borderLeftColor: '#D32F2F', // Czerwona linia zamiast priorytetu
+    },
+    taskNameOverdue: {
+        color: '#D32F2F', // Czerwony tekst
+        fontWeight: '700',
     },
     // ---------------------------------------------
     
@@ -915,6 +982,10 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#333',
     },
+    allDayTaskOverdue: { // Styl dla całodniowych w pełni przeterminowanych
+        backgroundColor: '#FFCDD2',
+        borderColor: '#D32F2F',
+    },
     allDayMoreText: {
         fontSize: 10,
         color: '#666',
@@ -977,5 +1048,10 @@ const styles = StyleSheet.create({
     gridTaskTime: {
         fontSize: 10,
         color: '#666',
+    },
+    gridTaskOverdue: { // Styl dla zadań z czasem w pełni przeterminowanych
+        backgroundColor: '#FDD8D8',
+        borderColor: '#D32F2F',
+        zIndex: 20, // Na wierzchu innych zadań
     }
 });
