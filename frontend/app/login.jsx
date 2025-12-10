@@ -56,7 +56,6 @@ export default function LoginScreen() {
           return;
         }
 
-        console.log("User logged in:", user.email);
         router.replace("/");
       })
       .catch((error) => {
@@ -107,91 +106,199 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Witaj!</Text>
-          <Image
-            source={require("../assets/images/dog_login_without_background_smaller.png")} 
-            style={styles.dogImage}
-          />
-          <Text style={styles.subtitle}>Zaloguj się</Text>
-        </View>
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
 
-        {/* ERROR */}
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+          {/* GÓRNA BIAŁA CZĘŚĆ */}
+          <View style={styles.topSection}>
+            <Text style={styles.title}>Witaj!</Text>
+
+            <Image
+              source={require("../assets/images/dog_login_without_background_smaller.png")}
+              style={styles.dogImage}
+            />
           </View>
-        ) : null}
 
-        {/* EMAIL */}
-        <TextInput
-          placeholder="E-mail"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError("");
-          }}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
+          {/* NIEBIESKI PANEL */}
+          <View style={styles.bluePanel}>
+            <Text style={styles.panelTitle}>Zaloguj się</Text>
 
-        {/* PASSWORD */}
-        <TextInput
-          placeholder="Hasło"
-          secureTextEntry
-          value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            setError("");
-          }}
-          style={styles.input}
-        />
+            {/* ERROR */}
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>⚠️ {error}</Text>
+              </View>
+            ) : null}
 
-        {/* FORGOT PASSWORD */}
-        <TouchableOpacity onPress={() => setResetModalVisible(true)} style={{ alignSelf: "flex-end", marginBottom: 20 }}>
-          <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
-        </TouchableOpacity>
+            {/* EMAIL */}
+            <Text style={styles.label}>E-mail:</Text>
+            <TextInput
+              placeholder=""
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError("");
+              }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={styles.input}
+            />
 
-        {/* LOGIN BUTTON */}
-        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-          <Text style={styles.primaryText}>Zaloguj się</Text>
-        </TouchableOpacity>
+            {/* PASSWORD */}
+            <Text style={styles.label}>Hasło:</Text>
+            <TextInput
+              placeholder=""
+              secureTextEntry
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(""); 
+              }}
+              style={styles.input}
+            />
 
-        {/* REGISTER */}
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace("/register")}>
-          <Text style={styles.secondaryText}>Zarejestruj się</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            {/* FORGOT PASSWORD */}
+            <TouchableOpacity
+              onPress={() => setResetModalVisible(true)}
+              style={{ alignSelf: "flex-end", marginBottom: 20 }}
+            >
+              <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
+            </TouchableOpacity>
+
+            {/* LOGIN BUTTON */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>ZALOGUJ SIĘ</Text>
+            </TouchableOpacity>
+
+            {/* REGISTER */}
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => router.replace("/register")}
+            >
+              <Text style={styles.registerButtonText}>
+                Nie masz konta? Zarejestruj się
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" }, 
-  content: { padding: 24, flexGrow: 1, justifyContent: "center" },
-  header: { alignItems: "center", marginBottom: 30 },
-  dogImage: { width: 250, height: 250, marginBottom: 20, marginTop: 20 },
-  title: { fontSize: 32, fontWeight: "700", color: "#61ADE1", fontFamily: "AlfaSlabOne", letterSpacing: 5, }, 
-  subtitle: { fontSize: 32, color: "#6E6E73", marginTop: 4, fontFamily: "AlfaSlabOne",   },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  topSection: {
+    backgroundColor: "#fff",
+    alignItems: "center",
+    paddingTop: 60,
+    paddingBottom: 20,
+    zIndex: 10,
+  },
+
+  dogImage: {
+    width: 230,
+    height: 230,
+    resizeMode: "contain",
+    marginTop: 10,
+  },
+
+  title: {
+    fontSize: 36,
+    fontFamily: "AlfaSlabOne",
+    color: "#61ADE1",
+    letterSpacing: 3,
+  },
+
+  bluePanel: {
+    flex: 1,
+    backgroundColor: "#61ADE1",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingTop: 40,
+    paddingHorizontal: 32,
+    marginTop: 40, // KLUCZOWE – kapsuła nachodzi na górę
+    paddingBottom: 80,
+  },
+
+  panelTitle: {
+    fontSize: 32,
+    color: "#fff",
+    fontFamily: "AlfaSlabOne",
+    textAlign: "center",
+    marginBottom: 40,
+  },
+
+  label: {
+    color: "#fff",
+    fontWeight: "700",
+    marginBottom: 6,
+    fontSize: 18,
+  },
+
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E3EEF7",
     padding: 16,
-    borderRadius: 14,
-    marginBottom: 16,
+    borderRadius: 20,
+    marginBottom: 20,
     fontSize: 16,
   },
-  forgotText: { color: "#007AFF", fontSize: 14, marginBottom: 20 },
-  primaryButton: { backgroundColor: "#007AFF", padding: 16, borderRadius: 14, marginBottom: 16 },
-  primaryText: { color: "#fff", textAlign: "center", fontSize: 17, fontWeight: "600" },
-  secondaryButton: { padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: "#007AFF" },
-  secondaryText: { color: "#007AFF", textAlign: "center", fontSize: 16, fontWeight: "600" },
-  errorBox: { backgroundColor: "#FFE5E7", padding: 14, borderRadius: 12, marginBottom: 20 },
-  errorText: { color: "#C30000", fontSize: 14, fontWeight: "500" },
+
+  forgotText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    marginBottom: 10,
+  },
+
+  loginButton: {
+    backgroundColor: "#0072C6",
+    paddingVertical: 16,
+    borderRadius: 30,
+    marginTop: 10,
+  },
+
+  loginButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  registerButton: {
+    marginTop: 30,
+  },
+
+  registerButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+
+  errorBox: {
+    backgroundColor: "#FFE5E7",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+
+  errorText: {
+    color: "#C30000",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
 });
