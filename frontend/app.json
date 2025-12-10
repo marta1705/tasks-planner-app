@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "taskplanner", // Display name for the app
+    "name": "taskplanner",
     "slug": "taskplanner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tasks", // Custom scheme for deep linking
+    "scheme": "tasks",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -35,7 +35,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
