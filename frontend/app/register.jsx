@@ -5,14 +5,13 @@ import React from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View
 } from "react-native";
 import { useAuth } from '../context/AuthContext';
@@ -40,17 +39,16 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     setError("");
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
-    // flaga blokująca przekierowania w Layout podczas rejestracji
     setRegistering(true);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
       await updateProfile(user, { displayName: name });
+
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -58,10 +56,7 @@ export default function RegisterScreen() {
         createdAt: new Date(),
       });
 
-      // 4. Wysyłanie emaila aktywacyjnego
       await sendEmailVerification(user);
-
-      // 5. Wylogowanie – żeby nie wejść do aplikacji bez aktywacji linku w mailu
       await auth.signOut();
 
       alert(
@@ -70,13 +65,9 @@ export default function RegisterScreen() {
         "Po potwierdzeniu możesz się zalogować."
       );
 
-      // 6. Przekierowanie użytkownika
       router.replace("/login");
 
-      console.log("User registered with name:", name);
-
     } catch (error) {
-      console.error("Błąd rejestracji:", error.code, error.message);
       switch (error.code) {
         case "auth/email-already-in-use":
           setError("Ten adres email jest już zarejestrowany"); break;
@@ -90,9 +81,12 @@ export default function RegisterScreen() {
           setError("Wystąpił błąd: " + error.message);
       }
     } finally {
-      // Ustawienia flagi na false – odblokowanie przekierowań w Layout
       setRegistering(false);
-    };
+    }
+  };
+
+  const dismissKeyboardIfMobile = () => {
+    if (Platform.OS !== "web") Keyboard.dismiss();
   };
 
   return (
@@ -100,11 +94,9 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled" // klucz dla desktop/web
-        >
+      {/* Pressable zamiast TouchableWithoutFeedback — DZIAŁA NA WEB */}
+      <Pressable style={{ flex: 1 }} onPress={dismissKeyboardIfMobile}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
             <Text style={styles.title}>Utwórz konto</Text>
             <Text style={styles.subtitle}>Dołącz do nas już teraz</Text>
@@ -124,6 +116,7 @@ export default function RegisterScreen() {
                 style={styles.input}
               />
             </View>
+
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -168,58 +161,15 @@ export default function RegisterScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace("/login")}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => router.replace("/login")}
+            >
               <Text style={styles.secondaryButtonText}>Masz konto? Zaloguj się</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </TouchableWithoutFeedback>
-      <Modal
-        visible={verifyModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
-          <View style={{
-            width: "80%",
-            backgroundColor: "white",
-            padding: 20,
-            borderRadius: 12,
-            alignItems: "center"
-          }}>
-            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
-              Potwierdź swój email
-            </Text>
-
-            <Text style={{ textAlign: "center", fontSize: 16, marginBottom: 20 }}>
-              Wysłaliśmy link aktywacyjny na:{"\n"}
-              <Text style={{ fontWeight: "600" }}>{email}</Text>
-            </Text>
-
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#007AFF",
-                paddingVertical: 12,
-                paddingHorizontal: 30,
-                borderRadius: 10
-              }}
-              onPress={() => {
-                setVerifyModalVisible(false);
-                router.replace("/login");
-              }}
-            >
-              <Text style={{ color: "white", fontSize: 16, fontWeight: "600" }}>
-                OK
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
@@ -230,17 +180,43 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 40 },
   title: { fontSize: 32, fontWeight: "bold", color: "#333", marginBottom: 8, textAlign: "center" },
   subtitle: { fontSize: 16, color: "#666", marginBottom: 30, textAlign: "center" },
-  errorContainer: { backgroundColor: "#ffe6e6", borderLeftWidth: 4, borderLeftColor: "#ff4444", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, marginBottom: 20 },
+  errorContainer: {
+    backgroundColor: "#ffe6e6",
+    borderLeftWidth: 4,
+    borderLeftColor: "#ff4444",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 20
+  },
   errorText: { color: "#cc0000", fontSize: 14, fontWeight: "500" },
   inputContainer: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 8 },
-  input: { backgroundColor: "#fff", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, fontSize: 16, borderWidth: 1, borderColor: "#e0e0e0" },
-  primaryButton: { backgroundColor: "#007AFF", paddingVertical: 16, borderRadius: 12, marginTop: 10, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+  input: {
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0"
+  },
+  primaryButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 10
+  },
   primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "center" },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 30 },
   dividerLine: { flex: 1, height: 1, backgroundColor: "#e0e0e0" },
   dividerText: { marginHorizontal: 16, color: "#999", fontSize: 14 },
-  secondaryButton: { paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: "#007AFF", backgroundColor: "transparent" },
+  secondaryButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    backgroundColor: "transparent"
+  },
   secondaryButtonText: { color: "#007AFF", fontSize: 16, fontWeight: "600", textAlign: "center" },
 });
-

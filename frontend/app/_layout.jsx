@@ -1,11 +1,11 @@
+import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { PetProvider } from "../context/PetContext";
 import "../services/firebase";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

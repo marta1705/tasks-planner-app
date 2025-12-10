@@ -1,26 +1,26 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  Platform,
-  Keyboard,
-  TouchableWithoutFeedback,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Alert,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useTags } from "../../../context/TagsContext";
-import { useHabits } from "../../../context/HabitContext";
 import ColorPicker, { HueSlider, Preview } from "reanimated-color-picker";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
+import { useHabits } from "../../../context/HabitContext";
+import { useTags } from "../../../context/TagsContext";
 
 export default function AddHabitScreen() {
   const [name, setName] = useState("");

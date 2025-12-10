@@ -1,5 +1,9 @@
 import { useRouter } from "expo-router";
-import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  getAuth,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import React from "react";
 import {
   KeyboardAvoidingView,
@@ -9,7 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -44,7 +48,7 @@ export default function LoginScreen() {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        // sprawdzenie czy email jest zweryfikowany
+
         if (!user.emailVerified) {
           setError("Musisz najpierw potwierdzić adres email.");
           auth.signOut();
@@ -112,91 +116,92 @@ export default function LoginScreen() {
     }
   };
 
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View>
-          <Text style={styles.title}>Witaj</Text>
-
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              placeholder="twoj@email.com"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setError("");
-              }}
-              style={styles.input}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Hasło</Text>
-            <TextInput
-              placeholder="••••••••"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setError("");
-              }}
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-            <Text style={styles.primaryButtonText}>Zaloguj się</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setResetModalVisible(true)}
-            style={{ alignSelf: "flex-end", marginTop: 12 }}
-          >
-            <Text style={styles.forgotPasswordText}>Nie pamiętam hasła</Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>lub</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.replace("/register")}
-          >
-            <Text style={styles.secondaryButtonText}>
-              Nie masz konta? Zarejestruj się
-            </Text>
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        
+        {/* HEADER */}
+        <View style={{ alignItems: "center", marginBottom: 40 }}>
+          <Text style={styles.title}>Witaj ponownie</Text>
+          <Text style={styles.subtitle}>Zaloguj się, aby kontynuować</Text>
         </View>
+
+        {/* ERROR */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>⚠️ {error}</Text>
+          </View>
+        ) : null}
+
+        {/* EMAIL */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setError("");
+            }}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
+        </View>
+
+        {/* PASSWORD */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Hasło"
+            secureTextEntry
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              setError("");
+            }}
+            style={styles.input}
+          />
+        </View>
+
+        {/* FORGOT PASSWORD */}
+        <TouchableOpacity
+          onPress={() => setResetModalVisible(true)}
+          style={{ alignSelf: "flex-end", marginTop: 8 }}
+        >
+          <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
+        </TouchableOpacity>
+
+        {/* LOGIN BUTTON */}
+        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+          <Text style={styles.primaryText}>Zaloguj się</Text>
+        </TouchableOpacity>
+
+        {/* DIVIDER */}
+        <View style={styles.divider}>
+          <View style={styles.line} />
+          <Text style={styles.dividerText}>lub</Text>
+          <View style={styles.line} />
+        </View>
+
+        {/* REGISTER */}
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => router.replace("/register")}
+        >
+          <Text style={styles.secondaryText}>Utwórz nowe konto</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-
-      {/* Modal resetu hasła*/}
+      {/* RESET PASSWORD MODAL */}
       {resetModalVisible && (
-        <View style={styles.resetOverlay}>
-          <View style={styles.resetBox}>
-            <Text style={styles.resetTitle}>Reset hasła</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Reset hasła</Text>
 
             {resetError ? (
-              <Text style={styles.resetError}>⚠️ {resetError}</Text>
+              <Text style={styles.modalError}>⚠️ {resetError}</Text>
             ) : null}
 
             <TextInput
@@ -205,23 +210,23 @@ export default function LoginScreen() {
               onChangeText={setResetEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              style={styles.resetInput}
+              style={styles.modalInput}
             />
 
-            <View style={styles.resetButtons}>
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.resetButton, { backgroundColor: "#ccc" }]}
+                style={[styles.modalButton, { backgroundColor: "#E5E5E5" }]}
                 onPress={() => setResetModalVisible(false)}
               >
-                <Text>Anuluj</Text>
+                <Text style={styles.modalCancel}>Anuluj</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.resetButton, { backgroundColor: "#007AFF" }]}
+                style={[styles.modalButton, { backgroundColor: "#007AFF" }]}
                 onPress={handlePasswordReset}
                 disabled={resetLoading}
               >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                <Text style={styles.modalSend}>
                   {resetLoading ? "Wysyłanie..." : "Wyślij link"}
                 </Text>
               </TouchableOpacity>
@@ -236,148 +241,160 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 30,
-    textAlign: "center",
+    backgroundColor: "#F4F6FA",
   },
 
-  errorContainer: {
-    backgroundColor: "#ffe6e6",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ff4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  content: {
+    padding: 24,
+    justifyContent: "center",
+    flexGrow: 1,
+  },
+
+  title: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#1B1B1D",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#6E6E73",
+    marginTop: 6,
+  },
+
+  errorBox: {
+    backgroundColor: "#FFE5E7",
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 20,
   },
   errorText: {
-    color: "#cc0000",
+    color: "#C30000",
     fontSize: 14,
     fontWeight: "500",
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
+
+  inputWrapper: {
+    marginBottom: 18,
   },
   input: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 14,
     fontSize: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#E8E8E8",
   },
+
+  forgotText: {
+    color: "#007AFF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
   primaryButton: {
     backgroundColor: "#007AFF",
     paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    borderRadius: 14,
+    marginTop: 22,
   },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  primaryText: {
     textAlign: "center",
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "600",
   },
+
   divider: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 30,
   },
-  dividerLine: {
+  line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#DDDDDD",
   },
   dividerText: {
-    marginHorizontal: 16,
+    marginHorizontal: 14,
     color: "#999",
     fontSize: 14,
   },
+
   secondaryButton: {
     paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: "#007AFF",
-    backgroundColor: "transparent",
   },
-  secondaryButtonText: {
-    color: "#007AFF",
+  secondaryText: {
+    textAlign: "center",
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "center",
+    color: "#007AFF",
   },
-  forgotPasswordText: {
-    color: "#727272ff",
-    fontSize: 14,
-    textDecorationLine: "underline",
-    fontWeight: "500",
-  },
-  resetOverlay: {
+
+  modalOverlay: {
     position: "absolute",
     top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    padding: 24,
   },
-  resetBox: {
+  modalBox: {
     width: "100%",
     backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 14,
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  resetTitle: {
+  modalTitle: {
     fontSize: 20,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 20,
   },
-  resetError: {
-    color: "#cc0000",
-    marginBottom: 10,
+  modalError: {
     textAlign: "center",
+    color: "#C30000",
+    marginBottom: 10,
   },
-  resetInput: {
-    backgroundColor: "#f9f9f9",
-    padding: 12,
+  modalInput: {
+    backgroundColor: "#F6F7F9",
+    padding: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#DDD",
     marginBottom: 20,
   },
-  resetButtons: {
+  modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  resetButton: {
+  modalButton: {
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 18,
     borderRadius: 10,
+    alignItems: "center",
+    marginHorizontal: 6,
   },
-
+  modalCancel: {
+    color: "#333",
+    fontWeight: "600",
+  },
+  modalSend: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });
