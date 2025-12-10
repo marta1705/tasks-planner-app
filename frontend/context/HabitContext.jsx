@@ -1,13 +1,28 @@
-import { createContext, useState, useContext } from "react";
-import { usePet } from "./PetContext";
+// frontend/context/HabitContext.jsx
+
 import * as Notifications from "expo-notifications";
+import { createContext, useContext, useEffect, useState } from "react";
+import { usePet } from "./PetContext";
 
 const HabitContext = createContext();
+
+// STAŁE DLA GRYWALIZACJI
+const REWARD_AMOUNT = 2; // Smaczki za wykonanie nawyku
+const PENALTY_AMOUNT = 5; // Kara za przegapiony dzień (zdrowie/XP)
 
 export function HabitProvider({ children }) {
   const [habits, setHabits] = useState([]);
   const [completions, setCompletions] = useState({});
-  const { addPoints, removePoints } = usePet();
+  // Stan do śledzenia naliczonych kar, aby uniknąć wielokrotnego nakładania w tym samym dniu
+  const [penaltiesApplied, setPenaltiesApplied] = useState({});
+  
+  // ZMIANA: Pobranie nowych funkcji PetContext
+  const { 
+      addTreats, 
+      removeTreats,
+      removeHealthPoints,
+      lastUpdate // Używane jako trigger do ponownego sprawdzania kar
+  } = usePet();
 
   const addHabit = (habit) => {
     setHabits((prevHabits) => [
@@ -54,11 +69,10 @@ export function HabitProvider({ children }) {
       },
     }));
 
+    // ZMIANA: Nagradzamy tylko za pierwsze ukończenie. Jeśli odznaczymy, nagroda pozostaje.
     if (!isCurrentlyCompleted) {
-      addPoints(3);
-    } else {
-      removePoints(3);
-    }
+      addTreats(REWARD_AMOUNT); // Nagroda: 2 smaczki
+    } 
   };
 
   const isHabitCompletedOnDate = (habitId, date) => {
@@ -78,6 +92,7 @@ export function HabitProvider({ children }) {
 
     const targetDate = new Date(targetDateStr + "T12:00:00");
     const dayOfWeek = targetDate.getDay();
+    // POPRAWKA: Prawidłowe polskie znaki
     const dayNames = ["Nd", "Pon", "Wt", "Śr", "Czw", "Pt", "Sob"];
     const dayName = dayNames[dayOfWeek];
 
@@ -85,6 +100,7 @@ export function HabitProvider({ children }) {
       case "daily":
         return true;
       case "weekly":
+        // Dzień 1 = Poniedziałek
         return dayOfWeek === 1;
       case "custom":
         return habit.customDays.includes(dayName);
@@ -92,6 +108,65 @@ export function HabitProvider({ children }) {
         return false;
     }
   };
+  
+  // =================================================================
+  // ✅ LOGIKA NAKŁADANIE KAR ZA ZALĘGŁE NAWYKI
+  // =================================================================
+  const applyDailyHabitPenalties = () => {
+    // Logika kar naliczana za wczoraj (-5 HP) i przedwczoraj (+dodatkowe -5 HP)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Sprawdzamy wczoraj
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    // Sprawdzamy przedwczoraj
+    const dayBeforeYesterday = new Date(yesterday);
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 1);
+    const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split("T")[0];
+    
+    let totalPenalty = 0;
+    const newPenalties = { ...penaltiesApplied };
+
+    habits.forEach(habit => {
+        // 1. Sprawdź Wczoraj (Kara: -5 HP)
+        if (shouldShowHabitOnDate(habit, yesterdayStr) && 
+            !isHabitCompletedOnDate(habit.id, yesterdayStr) &&
+            !penaltiesApplied[habit.id]?.includes(yesterdayStr)) {
+            
+            totalPenalty += PENALTY_AMOUNT; 
+            if (!newPenalties[habit.id]) newPenalties[habit.id] = [];
+            newPenalties[habit.id].push(yesterdayStr);
+        }
+        
+        // 2. Sprawdź Przedwczoraj (Kara: dodatkowe -5 HP)
+        if (shouldShowHabitOnDate(habit, dayBeforeYesterdayStr) && 
+            !isHabitCompletedOnDate(habit.id, dayBeforeYesterdayStr) &&
+            newPenalties[habit.id]?.includes(yesterdayStr) && 
+            !penaltiesApplied[habit.id]?.includes(dayBeforeYesterdayStr)) {
+
+            totalPenalty += PENALTY_AMOUNT; 
+            if (!newPenalties[habit.id]) newPenalties[habit.id] = [];
+            newPenalties[habit.id].push(dayBeforeYesterdayStr);
+        }
+    });
+
+    if (totalPenalty > 0) {
+        removeHealthPoints(totalPenalty);
+        console.log(`[PENALTY] Nałożono łączną karę: -${totalPenalty} zdrowia za zaległe nawyki.`);
+    }
+    
+    // Aktualizuj stan nałożonych kar
+    setPenaltiesApplied(newPenalties);
+  };
+
+  useEffect(() => {
+    // Wywołanie sprawdzania kar przy starcie kontekstu (np. otwarcie aplikacji)
+    applyDailyHabitPenalties(); 
+  }, [habits.length, lastUpdate]);
+
 
   const getHabitsForDate = (selectedTags = [], date) => {
     const dateString =
@@ -162,6 +237,7 @@ export function HabitProvider({ children }) {
         getHabitsForDate,
         deleteHabit,
         editHabit,
+        applyDailyHabitPenalties,
       }}
     >
       {children}
