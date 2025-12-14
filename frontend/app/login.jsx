@@ -116,18 +116,18 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
 
-          {/* GÓRNA BIAŁA CZĘŚĆ */}
-          <View style={styles.topSection}>
-            <Text style={styles.title}>Witaj!</Text>
-
-            <Image
-              source={require("../assets/images/dog_login_without_background_smaller.png")}
-              style={styles.dogImage}
-            />
-          </View>
+          {/* HEADER */}
+<View style={styles.topSection}>
+  <Text style={styles.title}>Witaj!</Text>
+</View>
+        {/* PIES – WARSTWA */}
+          <Image
+            source={require("../assets/images/dog_login_without_background_smaller.png")}
+            style={styles.dogFloating}
+          />
 
           {/* NIEBIESKI PANEL */}
-          <View style={styles.bluePanel}>
+            <View style={styles.bluePanel}>
             <Text style={styles.panelTitle}>Zaloguj się</Text>
 
             {/* ERROR */}
@@ -200,20 +200,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  topSection: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: 20,
-    zIndex: 10,
-  },
+topSection: {
+  backgroundColor: "#fff",
+  alignItems: "center",
+  paddingTop: 60,
+  paddingBottom: 20,
+  zIndex: 20,
+},
 
-  dogImage: {
-    width: 230,
-    height: 230,
-    resizeMode: "contain",
-    marginTop: 10,
-  },
+
+dogFloating: {
+  width: 230,
+  height: 230,
+  resizeMode: "contain",
+  position: "absolute",
+  top: 120,           // reguluje „zanurzenie”
+  alignSelf: "center",
+  zIndex: 5,
+},
+
 
   title: {
     fontSize: 36,
@@ -222,16 +227,18 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
 
-  bluePanel: {
-    flex: 1,
-    backgroundColor: "#61ADE1",
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingTop: 40,
-    paddingHorizontal: 32,
-    marginTop: 40, // KLUCZOWE – kapsuła nachodzi na górę
-    paddingBottom: 80,
-  },
+bluePanel: {
+  flex: 1,
+  backgroundColor: "#61ADE1",
+  borderTopLeftRadius: 40,
+  borderTopRightRadius: 40,
+  paddingTop: 100,    // ⬅️ miejsce na głowę psa
+  paddingHorizontal: 32,
+  marginTop: 160,     // ⬅️ WCHODZI NA PSA
+  paddingBottom: 80,
+  zIndex: 10,
+},
+
 
   panelTitle: {
     fontSize: 32,
