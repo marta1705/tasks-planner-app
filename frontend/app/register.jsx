@@ -1,222 +1,174 @@
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import React from "react";
 import {
-  Keyboard,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { useAuth } from '../context/AuthContext';
-import { auth, db } from "../services/firebase";
 
 export default function RegisterScreen() {
-  const { setRegistering } = useAuth();
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [error, setError] = React.useState("");
-  const [verifyModalVisible, setVerifyModalVisible] = React.useState(false);
   const router = useRouter();
-
-  const validateForm = () => {
-    if (!name.trim()) { setError("Proszę podać imię"); return false; }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { setError("Nieprawidłowy adres email"); return false; }
-    if (password.length < 6) { setError("Hasło musi mieć co najmniej 6 znaków"); return false; }
-    if (password !== confirmPassword) { setError("Hasła nie są identyczne"); return false; }
-    return true;
-  };
-
-  const handleRegister = async () => {
-    setError("");
-
-    if (!validateForm()) return;
-
-    setRegistering(true);
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await updateProfile(user, { displayName: name });
-
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name,
-        email: user.email,
-        createdAt: new Date(),
-      });
-
-      await sendEmailVerification(user);
-      await auth.signOut();
-
-      alert(
-        "Twoje konto zostało utworzone.\n\n" +
-        "Wysłaliśmy link aktywacyjny na: " + email + "\n\n" +
-        "Po potwierdzeniu możesz się zalogować."
-      );
-
-      router.replace("/login");
-
-    } catch (error) {
-      switch (error.code) {
-        case "auth/email-already-in-use":
-          setError("Ten adres email jest już zarejestrowany"); break;
-        case "auth/invalid-email":
-          setError("Nieprawidłowy adres email"); break;
-        case "auth/weak-password":
-          setError("Hasło jest zbyt słabe"); break;
-        case "auth/network-request-failed":
-          setError("Błąd połączenia z siecią"); break;
-        default:
-          setError("Wystąpił błąd: " + error.message);
-      }
-    } finally {
-      setRegistering(false);
-    }
-  };
-
-  const dismissKeyboardIfMobile = () => {
-    if (Platform.OS !== "web") Keyboard.dismiss();
-  };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Pressable zamiast TouchableWithoutFeedback — DZIAŁA NA WEB */}
-      <Pressable style={{ flex: 1 }} onPress={dismissKeyboardIfMobile}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Utwórz konto</Text>
-            <Text style={styles.subtitle}>Dołącz do nas już teraz</Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        {/* HEADER */}
+        <View style={styles.header}>
 
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>⚠️ {error}</Text>
-              </View>
-            ) : null}
+          <Text style={styles.headerTitle}>Fajnie Cię</Text>
+          <Text style={styles.headerSubtitle}>poznać!</Text>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Imię</Text>
-              <TextInput
-                placeholder="Jan Kowalski"
-                value={name}
-                onChangeText={(text) => { setName(text); setError(""); }}
-                style={styles.input}
-              />
-            </View>
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                placeholder="twoj@email.com"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={(text) => { setEmail(text); setError(""); }}
-                style={styles.input}
-                keyboardType="email-address"
-              />
-            </View>
+        {/* PANEL */}
+        <View style={styles.panel}>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Hasło</Text>
-              <TextInput
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(text) => { setPassword(text); setError(""); }}
-                secureTextEntry
-                style={styles.input}
-              />
-            </View>
+                    <Image
+  source={require("../assets/images/paw-print-1765148644306.png")}
+  style={styles.pawImage}
+/>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Potwierdź hasło</Text>
-              <TextInput
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChangeText={(text) => { setConfirmPassword(text); setError(""); }}
-                secureTextEntry
-                style={styles.input}
-              />
-            </View>
+          <View style={styles.formWrapper}>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={handleRegister}>
-              <Text style={styles.primaryButtonText}>Zarejestruj się</Text>
+            <Text style={styles.panelTitle}>Zarejestruj się</Text>
+            
+            <Text style={styles.label}>Imię:</Text>
+            <TextInput style={styles.input} />
+
+            <Text style={styles.label}>E-mail:</Text>
+            <TextInput style={styles.input} />
+
+            <Text style={styles.label}>Hasło:</Text>
+            <TextInput secureTextEntry style={styles.input} />
+
+            <Text style={styles.label}>Powtórz hasło:</Text>
+            <TextInput secureTextEntry style={styles.input} />
+
+            <TouchableOpacity style={styles.button}>
+              <Text style={styles.buttonText}>ZAREJESTRUJ SIĘ</Text>
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>lub</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => router.replace("/login")}
-            >
-              <Text style={styles.secondaryButtonText}>Masz konto? Zaloguj się</Text>
+            <TouchableOpacity onPress={() => router.replace("/login")}>
+              <Text style={styles.loginText}>
+                Masz już konto? <Text style={styles.loginLink}>Zaloguj się</Text>
+              </Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </Pressable>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  scrollContent: { flexGrow: 1 },
-  content: { flex: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 40 },
-  title: { fontSize: 32, fontWeight: "bold", color: "#333", marginBottom: 8, textAlign: "center" },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 30, textAlign: "center" },
-  errorContainer: {
-    backgroundColor: "#ffe6e6",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ff4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 20
-  },
-  errorText: { color: "#cc0000", fontSize: 14, fontWeight: "500" },
-  inputContainer: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 8 },
-  input: {
+  container: {
+    flex: 1,
     backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+  },
+
+  header: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    alignItems: "center",
+  },
+
+
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: "AlfaSlabOne",
+    color: "#7DB9E8",
+  },
+
+  headerSubtitle: {
+    fontSize: 28,
+    fontFamily: "AlfaSlabOne",
+    color: "#7DB9E8",
+  },
+
+pawImage: {
+  position: "absolute",
+  top: -100,          
+  right: 24,
+  width: 200,        
+  height: 200,
+  resizeMode: "contain",
+  transform: [{ rotate: "18deg" }],
+  zIndex: 20,
+},
+
+
+
+  panel: {
+    flex: 1,
+    backgroundColor: "#6FB3E6",
+    borderTopLeftRadius: 60,
+    borderTopRightRadius: 60,
+    paddingTop: 40,
+    paddingBottom: 30,
+  },
+
+    panelTitle: {
+    fontSize: 32,
+    color: "#fff",
+    fontFamily: "AlfaSlabOne",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  formWrapper: {
+    paddingHorizontal: 32,
+    maxWidth: 800,
+    width: "100%",
+    alignSelf: "center",
+  },
+
+  label: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  input: {
+    backgroundColor: "#E5E5E5",
+    height: 48,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    marginBottom: 20,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0"
   },
-  primaryButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 10
+
+  button: {
+    backgroundColor: "#0072C6",
+    borderRadius: 26,
+    paddingVertical: 14,
+    marginTop: 10,
+    marginBottom: 30,
   },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "center" },
-  divider: { flexDirection: "row", alignItems: "center", marginVertical: 30 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#e0e0e0" },
-  dividerText: { marginHorizontal: 16, color: "#999", fontSize: 14 },
-  secondaryButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    backgroundColor: "transparent"
+
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "700",
+    fontSize: 16,
   },
-  secondaryButtonText: { color: "#007AFF", fontSize: 16, fontWeight: "600", textAlign: "center" },
+
+  loginText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 14,
+  },
+
+  loginLink: {
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
 });

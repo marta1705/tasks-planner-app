@@ -128,6 +128,7 @@ export default function LoginScreen() {
 
           {/* NIEBIESKI PANEL */}
             <View style={styles.bluePanel}>
+              <View style={styles.formWrapper}>
             <Text style={styles.panelTitle}>Zaloguj się</Text>
 
             {/* ERROR */}
@@ -183,10 +184,10 @@ export default function LoginScreen() {
               onPress={() => router.replace("/register")}
             >
               <Text style={styles.registerButtonText}>
-                Nie masz konta? Zarejestruj się
+                Nie masz konta? <Text style={styles.registerLink}>Zarejestruj się</Text>
               </Text>
             </TouchableOpacity>
-
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -232,12 +233,18 @@ bluePanel: {
   backgroundColor: "#61ADE1",
   borderTopLeftRadius: 40,
   borderTopRightRadius: 40,
-  paddingTop: 100,    // ⬅️ miejsce na głowę psa
+  paddingTop: 70,    // ⬅️ miejsce na głowę psa
   paddingHorizontal: 32,
   marginTop: 160,     // ⬅️ WCHODZI NA PSA
-  paddingBottom: 80,
+  paddingBottom: 40,
   zIndex: 10,
 },
+
+  formWrapper: {
+    width: "100%",
+    maxWidth: 800,        
+    alignSelf: "center",
+  },
 
 
   panelTitle: {
@@ -245,7 +252,7 @@ bluePanel: {
     color: "#fff",
     fontFamily: "AlfaSlabOne",
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 20,
   },
 
   label: {
@@ -257,9 +264,9 @@ bluePanel: {
 
   input: {
     backgroundColor: "#E3EEF7",
-    padding: 16,
+    padding: 14,
     borderRadius: 20,
-    marginBottom: 20,
+    marginBottom: 4,
     fontSize: 16,
   },
 
@@ -293,6 +300,11 @@ bluePanel: {
     textAlign: "center",
     fontWeight: "600",
     fontSize: 15,
+  },
+
+    registerLink: {
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 
   errorBox: {
