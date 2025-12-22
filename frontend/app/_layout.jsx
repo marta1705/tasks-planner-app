@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { PetProvider } from "../context/PetContext";
+import { ThemeProvider } from "../context/ThemeContext";
 import "../services/firebase";
 
 function RootLayoutNav() {
@@ -46,9 +47,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <PetProvider>
-        <RootLayoutNav />
-      </PetProvider>
+      <ThemeProvider>
+        <PetProvider>
+          <RootLayoutNav />
+        </PetProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

@@ -3,7 +3,10 @@ import { useRouter } from "expo-router";
 import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signOut, updatePassword, updateProfile, verifyBeforeUpdateEmail } from "firebase/auth";
 import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { useState } from "react";
-import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { usePet } from "../../context/PetContext"; // Import Contextu
+import { useTheme } from "../../context/ThemeContext";
+
 
 export default function SettingsScreen() {
   const auth = getAuth();
@@ -30,6 +33,19 @@ export default function SettingsScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
+
+  // Motyw
+  const { theme, toggleTheme, colors } = useTheme();
+
+  // Pet
+  const { petOptions, updatePetId, selectedPetId } = usePet();
+
+  const [petModalVisible, setPetModalVisible] = useState(false);
+
+  const handleSelectPet = (petOption) => {
+    updatePetId(petOption.id);
+    setPetModalVisible(false);
+  };
 
   // Zapis imienia do Firebase
   const handleSaveName = async () => {
@@ -151,15 +167,41 @@ export default function SettingsScreen() {
     }
   };
 
+  const inputStyle = [
+    styles.input,
+    {
+      backgroundColor: colors.card,
+      color: colors.text,
+      borderColor: colors.border || '#ccc'
+    }
+  ];
+
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 60, paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 60, paddingBottom: 40 }}
+      style={{ backgroundColor: colors.background }}>
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back-outline" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.header}>Ustawienia</Text>
+        <Text style={[styles.header, { color: colors.text }]}>Ustawienia</Text>
       </View>
 
+      <View style={[styles.themeContainer, { backgroundColor: colors.card }]}>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 18, color: colors.text }}>
+            {theme === "dark" ? "Motyw: Ciemny" : "Motyw: Jasny"}
+          </Text>
+
+          <Switch
+            value={theme === "dark"}
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={theme === "dark" ? "#f5dd4b" : "#f4f3f4"}
+          />
+        </View>
+
+      </View>
       {/* -------- PROFIL -------- */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
@@ -172,12 +214,25 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* === Wybór zwierzaczka === */}
+      <View style={styles.section}>
+        <Ionicons name="paw-outline" size={22} color={colors.tint || "#007AFF"} />
+        <Text style={[styles.sectionLabel, { color: colors.text }]}>Wygląd pupila</Text>
+
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={() => setPetModalVisible(true)}
+        >
+          <Text style={styles.saveButtonText}>Wybierz pupila</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ------------------- ZMIANA IMIENIA ------------------- */}
       <View style={styles.section}>
         <Ionicons name="person-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Zmiana imienia</Text>
         <TextInput
-          style={styles.input}
+          style={inputStyle}
           value={name}
           onChangeText={setName}
           placeholder="Nowe imię"
@@ -358,6 +413,36 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
+      {/* === Modal zwierzaczka === */}
+      <Modal visible={petModalVisible} transparent animationType="fade" onRequestClose={() => setPetModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Wybierz pupila</Text>
+
+            <View style={styles.petGrid}>
+              {petOptions.map((pet) => (
+                <TouchableOpacity
+                  key={pet.id}
+                  style={[
+                    styles.petOption,
+                    // 3. ZMIANA: Podświetlenie na podstawie ID
+                    pet.id === selectedPetId && { borderWidth: 2, borderColor: colors.tint || "#007AFF" }
+                  ]}
+                  onPress={() => handleSelectPet(pet)}
+                >
+                  <Image source={pet.image} style={styles.petOptionImage} resizeMode="contain" />
+                  <Text style={[styles.petOptionName, { color: colors.text }]}>{pet.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.closeModalButton} onPress={() => setPetModalVisible(false)}>
+              <Text style={styles.closeModalText}>Anuluj</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
@@ -379,6 +464,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  themeContainer: {
+    flex: 1,
+    padding: 20,
+    marginBottom: 25,
   },
   section: {
     marginBottom: 25,
@@ -567,4 +657,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "bold",
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '90%', padding: 20, borderRadius: 20, alignItems: 'center' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
+  petGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15 },
+  petOption: { alignItems: 'center', margin: 5, padding: 10, borderRadius: 10 },
+  petOptionImage: { width: 60, height: 60, marginBottom: 5 },
+  petOptionName: { fontWeight: 'bold' },
+  closeModalButton: { marginTop: 20, padding: 10 },
+  closeModalText: { color: '#FF3B30', fontSize: 16 },
 });

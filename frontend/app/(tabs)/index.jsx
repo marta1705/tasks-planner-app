@@ -6,6 +6,7 @@ import { getAuth, reload } from "firebase/auth";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FloatingAction } from "react-native-floating-action";
+import { useTheme } from "../../context/ThemeContext";
 import PetWidget from "../PetWidget";
 
 
@@ -13,6 +14,7 @@ export default function Index() {
   const auth = getAuth();
   const router = useRouter();
   const [userName, setUserName] = useState("");
+  const { colors } = useTheme();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -51,14 +53,14 @@ export default function Index() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TouchableOpacity
         style={styles.settingsButton}
         onPress={() => router.push("/settings")}>
         <Ionicons name="settings-outline" size={22} color="white" />
         <Text style={styles.settingsButtonText}>Ustawienia</Text>
       </TouchableOpacity>
-      <Text style={styles.text}>{`Witaj ${userName}`}</Text>
+      <Text style={[styles.text, { color: colors.text }]}>{`Witaj ${userName}`}</Text>
       <PetWidget />
       <FloatingAction
         actions={actions}
@@ -79,7 +81,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f5f5f5",
+    //backgroundColor: "#f5f5f5",
   },
   text: {
     fontSize: 42,
