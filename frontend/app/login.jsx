@@ -1,7 +1,12 @@
 import { useRouter } from "expo-router";
-import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  getAuth,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import React from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,7 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -44,15 +49,14 @@ export default function LoginScreen() {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        // sprawdzenie czy email jest zweryfikowany
+
         if (!user.emailVerified) {
           setError("Musisz najpierw potwierdzić adres email.");
           auth.signOut();
           return;
         }
 
-        console.log("User logged in:", user.email);
-        //router.replace("/");
+        router.replace("/");
       })
       .catch((error) => {
         switch (error.code) {
@@ -67,15 +71,6 @@ export default function LoginScreen() {
             break;
           case "auth/wrong-password":
             setError("Nieprawidłowe hasło");
-            break;
-          case "auth/invalid-credential":
-            setError("Nieprawidłowy email lub hasło");
-            break;
-          case "auth/network-request-failed":
-            setError("Błąd połączenia z siecią");
-            break;
-          case "auth/too-many-requests":
-            setError("Zbyt wiele prób logowania. Spróbuj ponownie później");
             break;
           default:
             setError("Wystąpił błąd podczas logowania");
@@ -94,12 +89,10 @@ export default function LoginScreen() {
     try {
       setResetLoading(true);
       await sendPasswordResetEmail(auth, resetEmail);
-
       alert("Wysłaliśmy link do resetu hasła na podany email.");
       setResetModalVisible(false);
       setResetEmail("");
     } catch (error) {
-      console.log(error);
       if (error.code === "auth/user-not-found") {
         setResetError("Nie znaleziono konta z tym adresem email");
       } else if (error.code === "auth/invalid-email") {
@@ -112,272 +105,219 @@ export default function LoginScreen() {
     }
   };
 
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
-        <View>
-          <Text style={styles.title}>Witaj</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
-            </View>
-          ) : null}
+          {/* HEADER */}
+<View style={styles.topSection}>
+  <Text style={styles.title}>Witaj!</Text>
+</View>
+        {/* PIES – WARSTWA */}
+          <Image
+            source={require("../assets/images/dog_login_without_background_smaller.png")}
+            style={styles.dogFloating}
+          />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+          {/* NIEBIESKI PANEL */}
+            <View style={styles.bluePanel}>
+              <View style={styles.formWrapper}>
+            <Text style={styles.panelTitle}>Zaloguj się</Text>
+
+            {/* ERROR */}
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>⚠️ {error}</Text>
+              </View>
+            ) : null}
+
+            {/* EMAIL */}
+            <Text style={styles.label}>E-mail:</Text>
             <TextInput
-              placeholder="twoj@email.com"
+              placeholder=""
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
                 setError("");
               }}
-              style={styles.input}
               autoCapitalize="none"
               keyboardType="email-address"
+              style={styles.input}
             />
-          </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Hasło</Text>
+            {/* PASSWORD */}
+            <Text style={styles.label}>Hasło:</Text>
             <TextInput
-              placeholder="••••••••"
+              placeholder=""
+              secureTextEntry
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
-                setError("");
+                setError(""); 
               }}
-              secureTextEntry
               style={styles.input}
             />
+
+            {/* FORGOT PASSWORD */}
+            <TouchableOpacity
+              onPress={() => setResetModalVisible(true)}
+              style={{ alignSelf: "flex-end", marginBottom: 20 }}
+            >
+              <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
+            </TouchableOpacity>
+
+            {/* LOGIN BUTTON */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>ZALOGUJ SIĘ</Text>
+            </TouchableOpacity>
+
+            {/* REGISTER */}
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => router.replace("/register")}
+            >
+              <Text style={styles.registerButtonText}>
+                Nie masz konta? <Text style={styles.registerLink}>Zarejestruj się</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-            <Text style={styles.primaryButtonText}>Zaloguj się</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setResetModalVisible(true)}
-            style={{ alignSelf: "flex-end", marginTop: 12 }}
-          >
-            <Text style={styles.forgotPasswordText}>Nie pamiętam hasła</Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>lub</Text>
-            <View style={styles.dividerLine} />
           </View>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.replace("/register")}
-          >
-            <Text style={styles.secondaryButtonText}>
-              Nie masz konta? Zarejestruj się
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-
-      {/* Modal resetu hasła*/}
-      {resetModalVisible && (
-        <View style={styles.resetOverlay}>
-          <View style={styles.resetBox}>
-            <Text style={styles.resetTitle}>Reset hasła</Text>
-
-            {resetError ? (
-              <Text style={styles.resetError}>⚠️ {resetError}</Text>
-            ) : null}
-
-            <TextInput
-              placeholder="Podaj email"
-              value={resetEmail}
-              onChangeText={setResetEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.resetInput}
-            />
-
-            <View style={styles.resetButtons}>
-              <TouchableOpacity
-                style={[styles.resetButton, { backgroundColor: "#ccc" }]}
-                onPress={() => setResetModalVisible(false)}
-              >
-                <Text>Anuluj</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.resetButton, { backgroundColor: "#007AFF" }]}
-                onPress={handlePasswordReset}
-                disabled={resetLoading}
-              >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>
-                  {resetLoading ? "Wysyłanie..." : "Wyślij link"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fff",
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
+
+topSection: {
+  backgroundColor: "#fff",
+  alignItems: "center",
+  paddingTop: 60,
+  paddingBottom: 20,
+  zIndex: 20,
+},
+
+
+dogFloating: {
+  width: 230,
+  height: 230,
+  resizeMode: "contain",
+  position: "absolute",
+  top: 120,           // reguluje „zanurzenie”
+  alignSelf: "center",
+  zIndex: 5,
+},
+
+
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 30,
-    textAlign: "center",
+    fontSize: 36,
+    fontFamily: "AlfaSlabOne",
+    color: "#61ADE1",
+    letterSpacing: 3,
   },
 
-  errorContainer: {
-    backgroundColor: "#ffe6e6",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ff4444",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: "#cc0000",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  primaryButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 30,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#e0e0e0",
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: "#999",
-    fontSize: 14,
-  },
-  secondaryButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    backgroundColor: "transparent",
-  },
-  secondaryButtonText: {
-    color: "#007AFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  forgotPasswordText: {
-    color: "#727272ff",
-    fontSize: 14,
-    textDecorationLine: "underline",
-    fontWeight: "500",
-  },
-  resetOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  resetBox: {
+bluePanel: {
+  flex: 1,
+  backgroundColor: "#61ADE1",
+  borderTopLeftRadius: 40,
+  borderTopRightRadius: 40,
+  paddingTop: 70,    // ⬅️ miejsce na głowę psa
+  paddingHorizontal: 32,
+  marginTop: 160,     // ⬅️ WCHODZI NA PSA
+  paddingBottom: 40,
+  zIndex: 10,
+},
+
+  formWrapper: {
     width: "100%",
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 14,
-  },
-  resetTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  resetError: {
-    color: "#cc0000",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  resetInput: {
-    backgroundColor: "#f9f9f9",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginBottom: 20,
-  },
-  resetButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  resetButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
+    maxWidth: 800,        
+    alignSelf: "center",
   },
 
+
+  panelTitle: {
+    fontSize: 32,
+    color: "#fff",
+    fontFamily: "AlfaSlabOne",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  label: {
+    color: "#fff",
+    fontWeight: "700",
+    marginBottom: 6,
+    fontSize: 18,
+  },
+
+  input: {
+    backgroundColor: "#E3EEF7",
+    padding: 14,
+    borderRadius: 20,
+    marginBottom: 4,
+    fontSize: 16,
+  },
+
+  forgotText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    marginBottom: 10,
+  },
+
+  loginButton: {
+    backgroundColor: "#0072C6",
+    paddingVertical: 16,
+    borderRadius: 30,
+    marginTop: 10,
+  },
+
+  loginButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  registerButton: {
+    marginTop: 30,
+  },
+
+  registerButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+
+    registerLink: {
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+
+  errorBox: {
+    backgroundColor: "#FFE5E7",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+
+  errorText: {
+    color: "#C30000",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
 });

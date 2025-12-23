@@ -1,10 +1,16 @@
+// frontend/app/(tabs)/tasks/EditTaskScreen.jsx
+
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Calendar from 'expo-calendar';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    ActionSheetIOS,
     Alert,
+    Keyboard, // Dodane
+    KeyboardAvoidingView,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Switch,
@@ -19,23 +25,52 @@ import { PRIORITY_OPTIONS, TASK_ICONS, useTasks } from "../../../context/TaskCon
 // Data do walidacji w DatePickerze
 const today = new Date();
 today.setHours(0, 0, 0, 0);
-// POPRAWKA: Generowanie lokalnej daty w formacie YYYY-MM-DD
-const pad = (num) => (num < 10 ? '0' + num : num);
-const year = today.getFullYear();
-const month = pad(today.getMonth() + 1);
-const day = pad(today.getDate());
-const todayDateString = `${year}-${month}-${day}`;
-// KONIEC POPRAWKI
 
+// ✅ NOWA FUNKCJA: Formatowanie daty (YYYY-MM-DD)
+const formatDate = (date) => {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+};
+
+// Funkcja do konwersji daty na lokalny format wizualny (DD.MM.RRRR)
+const displayDate = (dateString) => {
+    if (!dateString) return "Wybierz datę";
+    const [year, month, day] = dateString.split('-').map(Number);
+    return `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
+};
 
 // Funkcja pomocnicza do łączenia daty i czasu w obiekt Date do walidacji i Kalendarza
 const combineDateTime = (dateString, timeString) => {
     if (!dateString || !timeString) return null;
     const [year, month, day] = dateString.split('-').map(Number);
     const [hour, minute] = timeString.split(':').map(Number);
+    // Używamy lokalnego czasu (Month jest 0-indeksowany)
     const date = new Date(year, month - 1, day, hour, minute);
     return date;
 };
+
+// Funkcja pomocnicza do tworzenia obiektu Date z formatu YYYY-MM-DD
+const dateStringToDateObj = (dateString) => {
+    if (!dateString) return new Date();
+    const [year, month, day] = dateString.split('-').map(Number);
+    // Miesiąc jest 0-indeksowany
+    return new Date(year, month - 1, day);
+};
+
+
+// -----------------------------------------------------
+// STAŁE DLA OPCJI POWTARZANIA
+const RECURRENCE_OPTIONS = [
+    { label: 'Nigdy', value: 'none' },
+    { label: 'Codziennie', value: 'daily' },
+    { label: 'Co tydzień', value: 'weekly' },
+    { label: 'Co miesiąc', value: 'monthly' },
+    { label: 'Co roku', value: 'yearly' },
+    { label: 'Własne...', value: 'custom' },
+];
+// -----------------------------------------------------
 
 
 // -------------------------------------------------------------------
@@ -52,7 +87,8 @@ const deleteEventFromCalendar = async (calendarEventId) => {
     }
 
     try {
-        await Calendar.deleteEventAsync(calendarEventId);
+        // Usuń całą serię powtarzających się zdarzeń
+        await Calendar.deleteEventAsync(calendarEventId, { futureEvents: true });
         console.log("Event deleted with ID: ", calendarEventId);
     } catch (error) {
         console.error("Calendar deletion error: ", error);
@@ -80,6 +116,24 @@ const updateEventInCalendar = async (task) => {
         Alert.alert("Błąd Daty", "Nie można przetworzyć daty/czasu na wydarzenie w kalendarzu.");
         return task.calendarEventId;
     }
+
+    const recurrenceRuleValue = task.recurrenceRule;
+    let recurrence = null;
+    
+    if (recurrenceRuleValue !== 'none' && !recurrenceRuleValue.startsWith('custom:')) {
+        recurrence = {
+            frequency: recurrenceRuleValue.toUpperCase(),
+        };
+    } else if (recurrenceRuleValue.startsWith('custom:')) {
+        const untilDate = recurrenceRuleValue.split(':')[1];
+        const [y, m, d] = untilDate.split('-').map(Number);
+        const untilDateObj = new Date(y, m - 1, d, 23, 59, 59);
+
+        recurrence = {
+            frequency: Calendar.Frequency.DAILY, 
+            endDate: untilDateObj,
+        };
+    }
     
     const eventDetails = {
         title: task.name,
@@ -89,10 +143,12 @@ const updateEventInCalendar = async (task) => {
         notes: task.description || 'Zaktualizowano z aplikacji do zarządzania zadaniami.',
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         alarms: task.isAllDay ? [] : [{ relativeOffset: -10, method: Calendar.AlarmMethod.DEFAULT }],
+        recurrence,
     };
 
     try {
-        await Calendar.updateEventAsync(task.calendarEventId, eventDetails);
+        // Aktualizujemy CAŁĄ serię powtarzalnych wydarzeń
+        await Calendar.updateEventAsync(task.calendarEventId, eventDetails, { futureEvents: true });
         console.log("Event updated with ID: ", task.calendarEventId);
         return task.calendarEventId;
     } catch (error) {
@@ -103,7 +159,7 @@ const updateEventInCalendar = async (task) => {
 };
 
 // -------------------------------------------------------------------
-// FUNKCJA POMOCNICZA: TWORZENIE ZDARZENIA (potrzebne do edycji, jeśli user włączy opcję)
+// FUNKCJA POMOCNICZA: TWORZENIE ZDARZENIA
 // -------------------------------------------------------------------
 const createEventInCalendar = async (task) => {
     const { status: calendarStatus } = await Calendar.requestCalendarPermissionsAsync();
@@ -134,6 +190,24 @@ const createEventInCalendar = async (task) => {
         return null;
     }
     
+    const recurrenceRuleValue = task.recurrenceRule;
+    let recurrence = null;
+    
+    if (recurrenceRuleValue !== 'none' && !recurrenceRuleValue.startsWith('custom:')) {
+        recurrence = {
+            frequency: recurrenceRuleValue.toUpperCase(),
+        };
+    } else if (recurrenceRuleValue.startsWith('custom:')) {
+        const untilDate = recurrenceRuleValue.split(':')[1];
+        const [y, m, d] = untilDate.split('-').map(Number);
+        const untilDateObj = new Date(y, m - 1, d, 23, 59, 59);
+
+        recurrence = {
+            frequency: Calendar.Frequency.DAILY, 
+            endDate: untilDateObj,
+        };
+    }
+
     const eventDetails = {
         title: task.name,
         startDate: startDateObj,
@@ -142,6 +216,7 @@ const createEventInCalendar = async (task) => {
         notes: task.description || 'Utworzone z aplikacji do zarządzania zadaniami.',
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         alarms: task.isAllDay ? [] : [{ relativeOffset: -10, method: Calendar.AlarmMethod.DEFAULT }],
+        recurrence, 
     };
 
     try {
@@ -168,7 +243,8 @@ const TimePicker = ({ time, setTime, disabled }) => {
         }
     };
     
-    // Tworzenie obiektu Date do przekazania do DateTimePicker
+    // Używamy formatDate(today) jako bezpiecznej daty bazowej
+    const todayDateString = formatDate(today);
     const dateForPicker = combineDateTime(todayDateString, time) || new Date();
 
     if (Platform.OS === 'web') {
@@ -215,7 +291,10 @@ export default function EditTaskScreen() {
 
     const initialTask = tasks.find(task => task.id === taskId);
 
-    // Jeśli zadanie nie istnieje, wracamy
+    // 🔥 NOWA ZMIENNA: Czy zadanie już się rozpoczęło? 🔥
+    const isTaskStarted = initialTask && combineDateTime(initialTask.startDate, initialTask.startTime) < new Date();
+
+
     useEffect(() => {
         if (!initialTask) {
             Alert.alert("Błąd", "Nie znaleziono zadania do edycji.");
@@ -225,24 +304,91 @@ export default function EditTaskScreen() {
 
 
     // --- STANY ---
+    // ZMIANA: Dodajemy obiekty Date dla pickerów
+    const [startDateObj, setStartDateObj] = useState(dateStringToDateObj(initialTask?.startDate || formatDate(today))); 
+    const [endDateObj, setEndDateObj] = useState(dateStringToDateObj(initialTask?.deadline || formatDate(today))); 
+    
     const [name, setName] = useState(initialTask?.name || '');
     const [description, setDescription] = useState(initialTask?.description || '');
-    const [startDate, setStartDate] = useState(initialTask?.startDate || todayDateString); 
+    const [startDate, setStartDate] = useState(initialTask?.startDate || formatDate(today)); 
     const [startTime, setStartTime] = useState(initialTask?.startTime || '09:00');
-    const [endDate, setEndDate] = useState(initialTask?.deadline || todayDateString); 
+    const [endDate, setEndDate] = useState(initialTask?.deadline || formatDate(today)); 
     const [endTime, setEndTime] = useState(initialTask?.endTime || '10:00');
     const [selectedPriority, setSelectedPriority] = useState(initialTask?.priority || PRIORITY_OPTIONS[0].value); 
     const [selectedIcon, setSelectedIcon] = useState(initialTask?.icon || TASK_ICONS[0].icon); 
     const [taskTags, setTaskTags] = useState(initialTask?.hashtags || []);
     const [tagInput, setTagInput] = useState('');
     
-    // Opcje kalendarza z AddTaskScreen.jsx, które mogły być dodane
+    // Opcje kalendarza
     const [isAllDay, setIsAllDay] = useState(initialTask?.isAllDay || false);
-    const [isRecurring, setIsRecurring] = useState(initialTask?.isRecurring || false);
+    const [recurrenceRule, setRecurrenceRule] = useState(initialTask?.recurrenceRule || 'none');
     const [reminderTime, setReminderTime] = useState(initialTask?.reminderTime || 'Godzina wydarzenia');
     const [saveToCalendar, setSaveToCalendar] = useState(initialTask?.saveToCalendar || false);
-    // Jeśli zadanie ma ID kalendarza, zawsze uznajemy opcję za aktywną
     const [calendarEventId, setCalendarEventId] = useState(initialTask?.calendarEventId || null);
+    const [isCompleted, setIsCompleted] = useState(initialTask?.isCompleted || false);
+    
+    // STAN DLA CUSTOM DATEPICKER
+    const [showCustomRecurrencePicker, setShowCustomRecurrencePicker] = useState(false);
+    const initialCustomDate = recurrenceRule.startsWith('custom:') ? recurrenceRule.split(':')[1] : formatDate(today);
+    const [customRecurrenceEndDate, setCustomRecurrenceEndDate] = useState(initialCustomDate);
+
+
+    // --- NOWA FUNKCJA: OBSŁUGA MODALU POWTARZANIA ---
+    const handleRecurrenceDateChange = (event, selectedDate) => {
+        setShowCustomRecurrencePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            const newDateString = formatDate(selectedDate);
+            setCustomRecurrenceEndDate(newDateString);
+            setRecurrenceRule(`custom:${newDateString}`);
+            Alert.alert("Powtarzanie Własne", `Ustawiono powtarzanie do: ${newDateString}.`);
+        }
+    };
+
+    const handleSetRecurrence = (ruleValue) => {
+        if (ruleValue === 'custom') {
+            if (Platform.OS === 'web') {
+                 Alert.alert("Błąd", "Wybór daty końcowej dla powtarzania 'Własne' nie jest w pełni wspierany w widoku Web.");
+            } else {
+                 // Otwórz DateTimePicker, aby użytkownik wybrał datę końcową powtarzania
+                setShowCustomRecurrencePicker(true);
+            }
+            return;
+        }
+        setRecurrenceRule(ruleValue);
+    };
+
+    const showRecurrenceOptions = () => {
+        const options = RECURRENCE_OPTIONS.map(o => o.label);
+        
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: options,
+                    cancelButtonIndex: 0, 
+                    title: "Ustaw Powtarzanie Zadania",
+                },
+                (buttonIndex) => {
+                    if (buttonIndex !== undefined) {
+                        const selectedValue = RECURRENCE_OPTIONS[buttonIndex].value;
+                        handleSetRecurrence(selectedValue);
+                    }
+                }
+            );
+        } else {
+             const alertOptions = RECURRENCE_OPTIONS.map(option => ({
+                text: option.label,
+                onPress: () => handleSetRecurrence(option.value),
+                style: option.value === 'none' ? 'cancel' : 'default' 
+             }));
+             
+             Alert.alert(
+                "Ustaw Powtarzanie",
+                "Wybierz regułę cykliczności:",
+                alertOptions
+            );
+        }
+    };
+    // -----------------------------------------------------
 
 
     // --- FUNKCJE OBSŁUGI ZMIANY DATY I CZASU ---
@@ -257,42 +403,61 @@ export default function EditTaskScreen() {
         }
     };
 
+    // ZMIANA: Stany do obsługi pickera
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [datePickerTarget, setDatePickerTarget] = useState('start');
 
-    const handleDateChange = (event, date) => {
+    // ZMIANA: Ujednolicona funkcja zmiany daty
+    const handleDateChange = (event, selectedDate) => {
         setShowDatePicker(Platform.OS === 'ios');
-        if (date) {
-            const newDateString = date.toISOString().split("T")[0];
+        if (selectedDate) {
+            const newDateString = formatDate(selectedDate);
+            
+            // 🔥 Blokada zmian daty startu, jeśli minęła. Sprawdzenie tylko dla targetu 'start' 🔥
+            if (datePickerTarget === 'start' && isTaskStarted) {
+                return; 
+            }
             
             if (datePickerTarget === 'start') {
                 setStartDate(newDateString);
+                setStartDateObj(selectedDate); // Aktualizacja obiektu Date
             } else {
                 setEndDate(newDateString);
+                setEndDateObj(selectedDate); // Aktualizacja obiektu Date
             }
 
-            const startDateTime = combineDateTime(datePickerTarget === 'start' ? newDateString : startDate, startTime);
-            const endDateTime = combineDateTime(datePickerTarget === 'end' ? newDateString : endDate, endTime);
+            const currentStartDate = datePickerTarget === 'start' ? newDateString : startDate;
+            const currentEndDate = datePickerTarget === 'end' ? newDateString : endDate;
+
+            const startDateTime = combineDateTime(currentStartDate, startTime);
+            const endDateTime = combineDateTime(currentEndDate, endTime);
 
             if (startDateTime > endDateTime) {
+                // Jeśli data startu jest późniejsza niż data końca, korygujemy datę końca.
                 if (datePickerTarget === 'start') {
                     setEndDate(newDateString); 
-                } else {
+                    setEndDateObj(selectedDate);
+                } 
+                // Jeśli zmieniliśmy datę końca na wcześniejszą niż startu, korygujemy datę startu
+                else if (!isTaskStarted) { 
                     setStartDate(newDateString);
+                    setStartDateObj(selectedDate);
                 }
             }
         }
     };
 
-    const showDatepickerModal = (target) => {
+    // ZMIANA: Ujednolicona funkcja wywołania pickera
+    const toggleDatePicker = (target) => {
+        // 🔥 Blokada wywołania pickera dla daty startu 🔥
+        if (target === 'start' && isTaskStarted) {
+            Alert.alert("Blokada Edycji", "Data i czas rozpoczęcia nie mogą być zmienione, ponieważ zadanie już się rozpoczęło.");
+            return; 
+        }
+        
         setDatePickerTarget(target);
         setShowDatePicker(true);
-    };
-
-    const displayDate = (dateString) => {
-        if (!dateString) return "Wybierz datę";
-        const [year, month, day] = dateString.split('-').map(Number);
-        return `${day}.${month}.${year}`;
+        Keyboard.dismiss();
     };
 
     // --- LOGIKA EDYCJI ---
@@ -309,10 +474,17 @@ export default function EditTaskScreen() {
             Alert.alert("Błąd Czasu", "Czas zakończenia musi być późniejszy niż czas rozpoczęcia (chyba że to wydarzenie całodniowe).");
             return;
         }
+        
+        // 🔥 Walidacja końcowa: Upewnij się, że start wciąż nie jest w przyszłości (jeśli nie jest zablokowany) 🔥
+        if (!isAllDay && !isTaskStarted && (startDateTime < new Date())) {
+             Alert.alert("Błąd Czasu", "Czas rozpoczęcia zadania nie może być wcześniejszy niż obecna chwila.");
+             return;
+        }
+
 
         let currentCalendarEventId = calendarEventId;
     
-        // --- LOGIKA AKTUALIZACJI/TWORZENIA/USUWANIA W KALENDARZU ---
+        // 1. Definicja pełnego payloadu
         const taskPayload = {
             id: taskId,
             name: name.trim(),
@@ -322,8 +494,12 @@ export default function EditTaskScreen() {
             startTime: startTime,
             endTime: endTime,
             isAllDay: isAllDay,
+            // KLUCZOWE POLA
+            recurrenceRule: recurrenceRule,
+            saveToCalendar: saveToCalendar,
         };
         
+        // 2. LOGIKA AKTUALIZACJI/TWORZENIA/USUWANIA W KALENDARZU
         if (saveToCalendar) {
             if (currentCalendarEventId) {
                 // SCENARIUSZ 1: Aktualizuj istniejące
@@ -335,15 +511,16 @@ export default function EditTaskScreen() {
                 currentCalendarEventId = newEventId;
             }
         } else if (currentCalendarEventId) {
-            // SCENARIUSZ 3: Usuń z kalendarza i wyczyść ID
+            // SCENARIUSZ 3: Usuń z kalendarza i wyczyść ID (Jeśli wyłączono saveToCalendar, ale było ID)
             await deleteEventFromCalendar(currentCalendarEventId);
             currentCalendarEventId = null; 
             Alert.alert("Informacja", "Wydarzenie usunięto z Kalendarza Google.");
         }
         // -------------------------------------------------------------
 
+        // 3. Ostateczny obiekt do aktualizacji w Firebase
         const updatedTask = {
-            id: taskId, // Pamiętaj o ID!
+            id: taskId, 
             name: name.trim(),
             description: description.trim(),
             deadline: endDate,
@@ -356,10 +533,12 @@ export default function EditTaskScreen() {
             
             // Pola Kalendarza
             isAllDay: isAllDay,
-            isRecurring: isRecurring,
+            isRecurring: recurrenceRule !== 'none', 
+            recurrenceRule: recurrenceRule, 
             reminderTime: reminderTime, 
             saveToCalendar: saveToCalendar,
-            calendarEventId: currentCalendarEventId, // Używamy zaktualizowanej wartości
+            calendarEventId: currentCalendarEventId,
+            isCompleted: isCompleted,
         };
         
         updateTask(updatedTask);
@@ -381,7 +560,6 @@ export default function EditTaskScreen() {
                     style: "destructive", 
                     onPress: async () => { 
                         
-                        // TUTAJ Wymagana logika: delete event z Calendar
                         await deleteEventFromCalendar(calendarEventId);
 
                         deleteTask(taskId);
@@ -419,217 +597,290 @@ export default function EditTaskScreen() {
 
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.section}>
-                {/* --- NAZWA ZADANIA --- */}
-                <Text style={styles.label}>Nazwa Zadania</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Wprowadź nazwę zadania"
-                    value={name}
-                    onChangeText={setName}
-                />
-
-                {/* --- OPIS ZADANIA --- */}
-                <Text style={styles.label}>Opis (Opcjonalnie)</Text>
-                <TextInput
-                    style={[styles.input, styles.multilineInput]}
-                    placeholder="Dodaj szczegóły i notatki"
-                    multiline
-                    numberOfLines={4}
-                    value={description}
-                    onChangeText={setDescription}
-                />
-            </View>
-
-            {/* -------------------------------------------------------------------------------------- */}
-            
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Czas i Termin</Text>
-
-                {/* --- CZAS ROZPOCZĘCIA --- */}
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Rozpoczęcie</Text>
-                    <View style={styles.dateTimeRow}>
-                        <TouchableOpacity onPress={() => showDatepickerModal('start')} style={styles.dateInput}>
-                            <Text style={styles.dateText}>{displayDate(startDate)}</Text>
-                        </TouchableOpacity>
-                        <TimePicker 
-                            time={startTime} 
-                            setTime={setStartTime} 
-                            disabled={isAllDay}
-                        />
-                    </View>
-                </View>
-
-                {/* --- CZAS ZAKOŃCZENIA / DEADLINE --- */}
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Zakończenie / Deadline</Text>
-                    <View style={styles.dateTimeRow}>
-                        <TouchableOpacity onPress={() => showDatepickerModal('end')} style={styles.dateInput}>
-                            <Text style={styles.dateText}>{displayDate(endDate)}</Text>
-                        </TouchableOpacity>
-                        <TimePicker 
-                            time={endTime} 
-                            setTime={setEndTime} 
-                            disabled={isAllDay}
-                        />
-                    </View>
-                </View>
-            </View>
-
-            {/* -------------------------------------------------------------------------------------- */}
-            
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Opcje Kalendarza</Text>
-                
-                {/* --- WYDARZENIE CAŁODNIOWE --- */}
-                <View style={styles.calendarOptionRow}>
-                    <Text style={styles.calendarOptionText}>Wydarzenie Całodniowe</Text>
-                    <Switch
-                        onValueChange={handleIsAllDayChange}
-                        value={isAllDay}
-                        trackColor={{ false: "#767577", true: "#34C759" }}
-                        thumbColor={isAllDay ? "#f4f3f4" : "#f4f3f4"}
-                    />
-                </View>
-                
-                {/* --- OPCJA: POWTÓRZ (Symulacja, wymaga rozszerzenia logiki) --- */}
-                <TouchableOpacity style={styles.calendarOptionRow} onPress={() => setIsRecurring(prev => !prev)}>
-                    <Text style={styles.calendarOptionText}>Powtórz</Text>
-                    <Text style={styles.calendarOptionValue}>{isRecurring ? 'Tak' : 'Brak'}</Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.container}
+        >
+            <View style={styles.header}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                >
+                    <Text style={styles.backButtonText}>← Wstecz</Text>
                 </TouchableOpacity>
-                
-                {/* --- OPCJA: ZAPISZ W KALENDARZU GOOGLE --- */}
-                <View style={[styles.calendarOptionRow, { borderBottomWidth: 0 }]}>
-                    <Text style={styles.calendarOptionText}>Zapisz w Kalendarzu Google</Text>
-                    <Switch
-                        onValueChange={setSaveToCalendar}
-                        value={saveToCalendar}
-                        trackColor={{ false: "#767577", true: "#007AFF" }}
-                        thumbColor={saveToCalendar ? "#f4f3f4" : "#f4f3f4"}
-                    />
-                </View>
-
+                <Text style={styles.title}>Edytuj zadanie</Text>
+                <View style={styles.placeholder} />
             </View>
-
-            {/* -------------------------------------------------------------------------------------- */}
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Priorytet i Ikona</Text>
-                
-                {/* --- WYBÓR PRIORYTETU --- */}
-                <Text style={styles.label}>Priorytet</Text>
-                <View style={styles.priorityContainer}>
-                    {PRIORITY_OPTIONS.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[
-                                styles.priorityButton,
-                                { backgroundColor: option.color },
-                                selectedPriority === option.value && styles.prioritySelected,
-                            ]}
-                            onPress={() => setSelectedPriority(option.value)}
-                        >
-                            <Text style={styles.priorityText}>{option.label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* --- WYBÓR IKONY --- */}
-                <Text style={styles.label}>Ikona Zadania</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconContainer}>
-                    {TASK_ICONS.map((item) => (
-                        <TouchableOpacity
-                            key={item.icon}
-                            style={[
-                                styles.iconButton,
-                                selectedIcon === item.icon && styles.iconSelected,
-                            ]}
-                            onPress={() => setSelectedIcon(item.icon)}
-                        >
-                            <Text style={{ fontSize: 24 }}>{item.icon}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            {/* -------------------------------------------------------------------------------------- */}
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tagi</Text>
-                
-                {/* --- DODAWANIE NOWEGO TAGA --- */}
-                <View style={styles.tagInputRow}>
+            <ScrollView style={styles.scrollContent}>
+                <View style={styles.formCard}>
+                    {/* --- NAZWA ZADANIA --- */}
+                    <Text style={styles.label}>Nazwa Zadania</Text>
                     <TextInput
-                        style={styles.tagInput}
-                        placeholder="Wpisz nowy tag..."
-                        value={tagInput}
-                        onChangeText={setTagInput}
-                        onSubmitEditing={handleAddTag}
+                        style={styles.input}
+                        placeholder="Wprowadź nazwę zadania"
+                        value={name}
+                        onChangeText={setName}
                     />
-                    <TouchableOpacity style={styles.tagAddButton} onPress={handleAddTag}>
-                        <Text style={styles.tagAddButtonText}>Dodaj</Text>
-                    </TouchableOpacity>
+
+                    {/* --- OPIS ZADANIA --- */}
+                    <Text style={styles.label}>Opis (Opcjonalnie)</Text>
+                    <TextInput
+                        style={[styles.input, styles.multilineInput]}
+                        placeholder="Dodaj szczegóły i notatki"
+                        multiline
+                        numberOfLines={4}
+                        value={description}
+                        onChangeText={setDescription}
+                    />
                 </View>
 
-                {/* --- WYBRANE TAGI --- */}
-                <View style={styles.tagsContainer}>
-                    {taskTags.map((tag) => (
-                        <TouchableOpacity
-                            key={tag}
-                            style={styles.tagBubble}
-                            onPress={() => handleRemoveTag(tag)}
-                        >
-                            <Text style={styles.tagText}>{tag} ×</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* -------------------------------------------------------------------------------------- */}
                 
-                {/* --- ISTNIEJĄCE TAGI --- */}
-                {allTags.length > 0 && (
-                    <View>
-                        <Text style={[styles.label, { marginTop: 15, marginBottom: 5 }]}>Sugerowane Tagi:</Text>
-                        <View style={styles.tagsContainer}>
-                            {allTags.filter(tag => !taskTags.includes(tag)).slice(0, 5).map((tag) => (
+                <View style={styles.formCard}>
+                    <Text style={styles.sectionTitle}>Priorytet i Ikona</Text>
+                    
+                    {/* --- WYBÓR PRIORYTETU --- */}
+                    <Text style={styles.label}>Priorytet</Text>
+                    <View style={styles.priorityContainer}>
+                        {PRIORITY_OPTIONS.map((option) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                style={[
+                                    styles.priorityButton,
+                                    { backgroundColor: option.color },
+                                    selectedPriority === option.value && styles.prioritySelected,
+                                ]}
+                                onPress={() => setSelectedPriority(option.value)}
+                            >
+                                <Text style={styles.priorityText}>{option.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* --- WYBÓR IKONY --- */}
+                    <Text style={styles.label}>Ikona Zadania</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconContainerScroll}>
+                        <View style={styles.iconContainer}>
+                            {TASK_ICONS.map((item) => (
                                 <TouchableOpacity
-                                    key={`suggested-${tag}`}
-                                    style={[styles.tagBubble, styles.suggestedTag]}
-                                    onPress={() => handleSelectExistingTag(tag)}
+                                    key={item.icon}
+                                    style={[
+                                        styles.iconButton,
+                                        selectedIcon === item.icon && styles.iconSelected,
+                                    ]}
+                                    onPress={() => setSelectedIcon(item.icon)}
                                 >
-                                    <Text style={[styles.tagText, styles.suggestedTagText]}>{tag}</Text>
+                                    <Text style={styles.iconText}>{item.icon}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
+                    </ScrollView>
+                </View>
+
+                {/* -------------------------------------------------------------------------------------- */}
+                
+                <View style={styles.formCard}>
+                    <Text style={styles.sectionTitle}>Czas i Termin</Text>
+
+                    {/* --- CZAS ROZPOCZĘCIA --- */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Rozpoczęcie {isTaskStarted && <Text style={{color: '#D32F2F'}}>(Zablokowane)</Text>}</Text>
+                        <View style={styles.dateTimeRow}>
+                            {/* 🔥 BLOKADA DATY STARTU 🔥 */}
+                            <Pressable 
+                                onPress={() => toggleDatePicker('start')} 
+                                style={{ flex: 1, marginRight: 10 }}
+                            >
+                                <TextInput
+                                    style={[
+                                        styles.dateInputText, 
+                                        isTaskStarted && styles.dateInputTextDisabled // Zablokowany styl
+                                    ]}
+                                    value={displayDate(startDate)}
+                                    placeholder="Wybierz datę startu"
+                                    editable={false}
+                                    onPressIn={() => toggleDatePicker('start')}
+                                />
+                            </Pressable>
+                            {/* 🔥 BLOKADA CZASU STARTU 🔥 */}
+                            <TimePicker 
+                                time={startTime} 
+                                setTime={setStartTime} 
+                                disabled={isAllDay || isTaskStarted} // Dodano isTaskStarted
+                            />
+                        </View>
                     </View>
+
+                    {/* --- CZAS ZAKOŃCZENIA / DEADLINE --- */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Zakończenie / Deadline</Text>
+                        <View style={styles.dateTimeRow}>
+                            {/* ZMIANA: Użycie Pressable i TextInput */}
+                            <Pressable onPress={() => toggleDatePicker('end')} style={{ flex: 1, marginRight: 10 }}>
+                                <TextInput
+                                    style={styles.dateInputText}
+                                    value={displayDate(endDate)}
+                                    placeholder="Wybierz datę końca"
+                                    editable={false}
+                                    onPressIn={() => toggleDatePicker('end')}
+                                />
+                            </Pressable>
+                            <TimePicker 
+                                time={endTime} 
+                                setTime={setEndTime} 
+                                disabled={isAllDay}
+                            />
+                        </View>
+                    </View>
+                </View>
+
+                {/* -------------------------------------------------------------------------------------- */}
+                
+                <View style={styles.formCard}>
+                    <Text style={styles.sectionTitle}>Opcje Kalendarza</Text>
+                    
+                    {/* --- WYDARZENIE CAŁODNIOWE --- */}
+                    <View style={styles.calendarOptionRow}>
+                        <Text style={styles.calendarOptionText}>Wydarzenie Całodniowe</Text>
+                        <Switch
+                            onValueChange={handleIsAllDayChange}
+                            value={isAllDay}
+                            trackColor={{ false: "#767577", true: "#34C759" }}
+                            thumbColor={isAllDay ? "#f4f3f4" : "#f4f3f4"}
+                        />
+                    </View>
+                    
+                    {/* --- OPCJA: POWTÓRZ (Teraz otwiera modal) --- */}
+                    <TouchableOpacity style={styles.calendarOptionRow} onPress={showRecurrenceOptions}>
+                        <Text style={styles.calendarOptionText}>Powtórz</Text>
+                        <Text style={styles.calendarOptionValue}>
+                            {RECURRENCE_OPTIONS.find(r => r.value === recurrenceRule.split(':')[0])?.label || `Własne (${recurrenceRule.split(':')[1] || 'Brak daty'})`}
+                        </Text>
+                    </TouchableOpacity>
+                    
+                    {/* --- OPCJA: POWIADOMIENIE (Symulacja, usuwam Alert) --- */}
+                     <View style={styles.calendarOptionRow}>
+                        <Text style={styles.calendarOptionText}>Powiadomienie</Text>
+                        <Text style={styles.calendarOptionValue}>{reminderTime}</Text>
+                     </View>
+
+                    {/* --- OPCJA: ZAPISZ W KALENDARZU GOOGLE --- */}
+                    <View style={[styles.calendarOptionRow, { borderBottomWidth: 0 }]}>
+                        <Text style={styles.calendarOptionText}>Zapisz w Kalendarzu Google</Text>
+                        <Switch
+                            onValueChange={setSaveToCalendar}
+                            value={saveToCalendar}
+                            trackColor={{ false: "#767577", true: "#007AFF" }}
+                            thumbColor={saveToCalendar ? "#f4f3f4" : "#f4f3f4"}
+                        />
+                    </View>
+
+                </View>
+
+                {/* -------------------------------------------------------------------------------------- */}
+
+                <View style={styles.formCard}>
+                    <Text style={styles.sectionTitle}>Tagi</Text>
+                    
+                    {/* --- DODAWANIE NOWEGO TAGA --- */}
+                    <View style={styles.tagInputRow}>
+                        <TextInput
+                            style={styles.tagInput}
+                            placeholder="Wpisz nowy tag..."
+                            value={tagInput}
+                            onChangeText={setTagInput}
+                            onSubmitEditing={handleAddTag}
+                        />
+                        <TouchableOpacity style={styles.tagAddButton} onPress={handleAddTag}>
+                            <Text style={styles.tagAddButtonText}>Dodaj</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* --- WYBRANE TAGI --- */}
+                    <View style={styles.tagsContainer}>
+                        {taskTags.map((tag) => (
+                            <TouchableOpacity
+                                key={tag}
+                                style={styles.tagBubble}
+                                onPress={() => handleRemoveTag(tag)}
+                            >
+                                <Text style={styles.tagText}>{tag} ×</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                    
+                    {/* --- ISTNIEJĄCE TAGI --- */}
+                    {allTags.length > 0 && (
+                        <View>
+                            <Text style={[styles.label, { marginTop: 15, marginBottom: 5 }]}>Sugerowane Tagi:</Text>
+                            <View style={styles.tagsContainer}>
+                                {allTags.filter(tag => !taskTags.includes(tag)).slice(0, 5).map((tag) => (
+                                    <TouchableOpacity
+                                        key={`suggested-${tag}`}
+                                        style={[styles.tagBubble, styles.suggestedTag]}
+                                        onPress={() => handleSelectExistingTag(tag)}
+                                    >
+                                        <Text style={[styles.tagText, styles.suggestedTagText]}>{tag}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+                </View>
+                
+                {/* -------------------------------------------------------------------------------------- */}
+
+                <View style={styles.formCard}>
+                    <Text style={styles.sectionTitle}>Stan Zadania</Text>
+                     <View style={styles.calendarOptionRow}>
+                        <Text style={styles.calendarOptionText}>Ukończone</Text>
+                        <Switch
+                            onValueChange={setIsCompleted}
+                            value={isCompleted}
+                            trackColor={{ false: "#767577", true: "#34C759" }}
+                            thumbColor={isCompleted ? "#f4f3f4" : "#f4f3f4"}
+                        />
+                    </View>
+                </View>
+
+
+                {/* DateTimePicker dla StartDate/EndDate */}
+                {showDatePicker && Platform.OS !== "web" && (
+                    <DateTimePicker
+                        value={datePickerTarget === 'start' ? startDateObj : endDateObj}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        onChange={handleDateChange}
+                        minimumDate={today}
+                    />
                 )}
-            </View>
+                
+                {/* CUSTOM DATE PICKER DLA POWTARZANIA */}
+                {showCustomRecurrencePicker && Platform.OS !== "web" && (
+                    <DateTimePicker
+                        value={combineDateTime(customRecurrenceEndDate, '12:00')}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        onChange={handleRecurrenceDateChange}
+                        minimumDate={today}
+                    />
+                )}
 
-            {/* DateTimePicker, który faktycznie wyświetla się jako modal/spinner */}
-            {showDatePicker && Platform.OS !== "web" && (
-                <DateTimePicker
-                    value={combineDateTime(datePickerTarget === 'start' ? startDate : endDate, '12:00')}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                    onChange={handleDateChange}
-                    minimumDate={today}
-                />
-            )}
+                {/* -------------------------------------------------------------------------------------- */}
 
-            {/* -------------------------------------------------------------------------------------- */}
+                {/* --- PRZYCISK ZAPISZ --- */}
+                <TouchableOpacity style={styles.saveButton} onPress={handleUpdateTask}>
+                    <Text style={styles.saveButtonText}>Zapisz Zmiany</Text>
+                </TouchableOpacity>
 
-            {/* --- PRZYCISK ZAPISZ --- */}
-            <TouchableOpacity style={styles.saveButton} onPress={handleUpdateTask}>
-                <Text style={styles.saveButtonText}>Zapisz Zmiany</Text>
-            </TouchableOpacity>
+                {/* --- PRZYCISK USUŃ --- */}
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteTask}>
+                    <Text style={styles.deleteButtonText}>Usuń Zadanie</Text>
+                </TouchableOpacity>
 
-            {/* --- PRZYCISK USUŃ --- */}
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteTask}>
-                <Text style={styles.deleteButtonText}>Usuń Zadanie</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 50 }} />
-        </ScrollView>
+                <View style={{ height: 50 }} />
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -637,25 +888,54 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f5f5f5",
-        padding: 20,
     },
-    section: {
+    scrollContent: {
+        flex: 1,
+        padding: 15,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 20,
+        paddingTop: 60,
+        backgroundColor: "#fff",
+        borderBottomWidth: 1,
+        borderBottomColor: "#e0e0e0",
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        color: "#007AFF",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#000",
+    },
+    placeholder: {
+        width: 80,
+    },
+    formCard: {
         backgroundColor: "#fff",
         borderRadius: 12,
-        padding: 15,
+        padding: 20,
         marginBottom: 20,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
+                shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
-                shadowRadius: 2,
+                shadowRadius: 4,
             },
             android: {
-                elevation: 2,
+                elevation: 3,
             },
-            default: { // Poprawka dla Web
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            default: {
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
             },
         }),
     },
@@ -666,18 +946,20 @@ const styles = StyleSheet.create({
         color: "#333",
     },
     label: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: "600",
         color: "#555",
-        marginBottom: 5,
+        marginBottom: 8,
         marginTop: 10,
     },
     input: {
-        backgroundColor: "#fff",
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: "#e0e0e0",
         padding: 12,
+        marginBottom: 20,
         borderRadius: 8,
+        backgroundColor: "#fff",
+        color: "#000",
         fontSize: 16,
     },
     multilineInput: {
@@ -690,15 +972,23 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 10,
     },
-    dateInput: {
-        flex: 1,
+    // ZMIANA: NOWY STYL DLA INPUTU DATY
+    dateInputText: { 
         backgroundColor: "#f9f9f9",
         borderWidth: 1,
         borderColor: "#ddd",
         padding: 12,
         borderRadius: 8,
-        marginRight: 10,
         alignItems: 'center',
+        textAlign: 'center',
+        fontSize: 16,
+        color: "#000",
+    },
+    // 🔥 NOWY STYL DLA ZABLOKOWANEGO INPUTU DATY 🔥
+    dateInputTextDisabled: { 
+        backgroundColor: '#e0e0e0', 
+        color: '#8e8e93',
+        borderColor: '#ccc',
     },
     timeInput: {
         flex: 0.8,
@@ -721,10 +1011,6 @@ const styles = StyleSheet.create({
     },
     timeInputTextDisabled: {
         color: "#999",
-    },
-    dateText: {
-        fontSize: 16,
-        color: "#000",
     },
     // --- Opcje Kalendarza ---
     calendarOptionRow: {
@@ -757,7 +1043,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         opacity: 0.6,
         ...Platform.select({
-            default: { // Poprawka dla Web
+            default: {
                 boxShadow: '0 1px 1px rgba(0, 0, 0, 0.1)',
             },
         }),
@@ -772,48 +1058,59 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     // --- Ikony ---
-    iconContainer: {
-        flexDirection: "row",
+    iconContainerScroll: {
         paddingVertical: 5,
     },
+    iconContainer: {
+        flexDirection: "row",
+        gap: 5,
+        marginBottom: 10,
+    },
     iconButton: {
-        padding: 10,
-        borderRadius: 10,
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        backgroundColor: "#f5f5f5",
+        justifyContent: "center",
+        alignItems: "center",
         borderWidth: 2,
         borderColor: "transparent",
-        marginRight: 10,
-        backgroundColor: '#f0f0f0',
     },
     iconSelected: {
         borderColor: "#007AFF",
         backgroundColor: '#e5f0ff',
+        borderWidth: 3,
+    },
+    iconText: {
+        fontSize: 28,
     },
     // --- Tagi ---
     tagInputRow: {
         flexDirection: "row",
         alignItems: "center",
+        marginBottom: 10,
     },
     tagInput: {
         flex: 1,
-        backgroundColor: "#fff",
         borderWidth: 1,
         borderColor: "#ccc",
         padding: 12,
         borderRadius: 8,
         fontSize: 16,
         marginRight: 10,
+        backgroundColor: "#fff",
     },
     tagAddButton: {
         backgroundColor: "#34C759",
         paddingHorizontal: 20,
         paddingVertical: 12,
         borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
     tagAddButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
+        color: "#fff",
+        fontWeight: "bold",
         fontSize: 16,
     },
     tagsContainer: {
@@ -836,6 +1133,8 @@ const styles = StyleSheet.create({
     },
     suggestedTag: {
         backgroundColor: '#007AFF10', 
+        borderWidth: 1,
+        borderColor: '#007AFF50',
     },
     suggestedTagText: {
         color: '#007AFF',
@@ -843,15 +1142,15 @@ const styles = StyleSheet.create({
     // --- Przyciski Zapisz/Usuń ---
     saveButton: {
         backgroundColor: "#007AFF",
-        padding: 15,
+        padding: 16,
         borderRadius: 12,
         alignItems: "center",
         marginTop: 20,
-        ...Platform.select({
-            default: { // Poprawka dla Web
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-            },
-        }),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     saveButtonText: {
         color: "#fff",
@@ -860,15 +1159,15 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         backgroundColor: "#FF3B30",
-        padding: 15,
+        padding: 16,
         borderRadius: 12,
         alignItems: "center",
         marginTop: 10,
-        ...Platform.select({
-            default: { // Poprawka dla Web
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-            },
-        }),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     deleteButtonText: {
         color: "#fff",

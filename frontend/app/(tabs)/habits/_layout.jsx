@@ -11,6 +11,10 @@ export default function HabitLayout() {
         name="AddHabitScreen"
         options={{ title: "", headerShown: false }}
       />
+      <Stack.Screen
+        name="EditHabitScreen"
+        options={{ title: "", headerShown: false }}
+      />
     </Stack>
   );
 }

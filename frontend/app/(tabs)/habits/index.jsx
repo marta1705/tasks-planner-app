@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,23 +12,42 @@ import {
 import { useRouter } from "expo-router";
 import { useHabits } from "../../../context/HabitContext";
 import { useTags } from "../../../context/TagsContext";
+import CalendarStrip from "react-native-calendar-strip";
+import HabitItem from "./HabitItem";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function Habits() {
   const router = useRouter();
   const {
-    getTodaysHabits,
     toggleHabitCompletion,
     isHabitCompletedOnDate,
     getHabitStreak,
+    getHabitsForDate,
+    deleteHabit,
   } = useHabits();
   const { tags, addTag, deleteTag, filterTags, toggleFilterTag } = useTags();
   const [showTagModal, setShowTagModal] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const today = new Date().toISOString().split("T")[0];
-  const todaysHabits = getTodaysHabits(filterTags);
 
-  console.log("Today's habits:", todaysHabits);
+  const habitsForSelectedDate = useMemo(() => {
+    const habits = getHabitsForDate(filterTags, selectedDate);
+
+    return habits.sort((a, b) => {
+      const aCompleted = isHabitCompletedOnDate(a.id, selectedDate);
+      const bCompleted = isHabitCompletedOnDate(b.id, selectedDate);
+
+      if (aCompleted === bCompleted) return 0;
+      return aCompleted ? 1 : -1;
+    });
+  }, [filterTags, selectedDate, isHabitCompletedOnDate]);
+
+  const onDateChanged = (dateMoment) => {
+    const date = dateMoment.toDate();
+    setSelectedDate(date);
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -42,7 +61,15 @@ export default function Habits() {
   };
 
   const handleToggleHabit = (habitId) => {
-    toggleHabitCompletion(habitId, today);
+    const selected = selectedDate.toISOString().split("T")[0];
+    if (selected > today) {
+      Alert.alert(
+        "Nawyk z przyszłości",
+        "Nie możesz oznaczyć nawyku jako wykonanego w przyszłości."
+      );
+      return;
+    }
+    toggleHabitCompletion(habitId, selectedDate);
   };
 
   const handleAddTag = () => {
@@ -59,22 +86,33 @@ export default function Habits() {
     ]);
   };
 
+  const handleDeleteHabit = (habitId) => {
+    Alert.alert("Usuń nawyk", "Czy na pewno chcesz usunąć ten nawyk?", [
+      { text: "Anuluj", style: "cancel" },
+      {
+        text: "Usuń",
+        style: "destructive",
+        onPress: () => deleteHabit(habitId),
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Dzisiejsze nawyki</Text>
-        <Text style={styles.date}>{formatDate(today)}</Text>
+        <Text style={styles.title}>Nawyki</Text>
+        <Text style={styles.date}>
+          {formatDate(selectedDate.toISOString().split("T")[0])}
+        </Text>
       </View>
 
-      {/* Filter and Add buttons */}
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setShowTagModal(true)}
         >
           <Text style={styles.buttonText}>
-            🏷️ Filtry {filterTags.length > 0 && `(${filterTags.length})`}
+            Filtry {filterTags.length > 0 && `(${filterTags.length})`}
           </Text>
         </TouchableOpacity>
 
@@ -86,7 +124,6 @@ export default function Habits() {
         </TouchableOpacity>
       </View>
 
-      {/* Active filters display */}
       {filterTags.length > 0 && (
         <View style={styles.activeFilters}>
           <Text style={styles.activeFiltersLabel}>Aktywne filtry:</Text>
@@ -100,81 +137,47 @@ export default function Habits() {
         </View>
       )}
 
-      {/* Habits list */}
-      <ScrollView style={styles.habitsList}>
-        {todaysHabits.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              {filterTags.length > 0
-                ? "Brak nawyków pasujących do wybranych filtrów"
-                : "Brak nawyków na dzisiaj"}
-            </Text>
-          </View>
-        ) : (
-          todaysHabits.map((habit) => (
-            <TouchableOpacity
-              key={habit.id}
-              style={[
-                styles.habitItem,
-                isHabitCompletedOnDate(habit.id, today) &&
-                  styles.habitCompleted,
-              ]}
-              onPress={() => handleToggleHabit(habit.id)}
-            >
-              <View style={styles.habitContent}>
-                <View style={styles.habitHeader}>
-                  <Text
-                    style={[
-                      styles.habitName,
-                      isHabitCompletedOnDate(habit.id, today) &&
-                        styles.habitNameCompleted,
-                    ]}
-                  >
-                    {habit.name}
-                  </Text>
-                  <View style={styles.streakContainer}>
-                    <Text style={styles.streakText}>
-                      🔥 {getHabitStreak(habit.id)}
-                    </Text>
-                  </View>
-                </View>
+      <View style={{ flex: 1, paddingTop: 10 }}>
+        <CalendarStrip
+          scrollable
+          style={{ height: 100 }}
+          selectedDate={selectedDate}
+          onDateSelected={onDateChanged}
+          highlightDateNameStyle={{ color: "#fff" }}
+          highlightDateNumberStyle={{ color: "#fff" }}
+          highlightDateContainerStyle={{
+            backgroundColor: "#007AFF",
+            borderRadius: 10,
+          }}
+        />
 
-                {habit.hashtags && habit.hashtags.length > 0 && (
-                  <View style={styles.habitTags}>
-                    {habit.hashtags.map((tag, index) => (
-                      <Text key={index} style={styles.habitTag}>
-                        {tag}
-                      </Text>
-                    ))}
-                  </View>
-                )}
+        <ScrollView style={styles.habitsList}>
+          {habitsForSelectedDate.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                {filterTags.length > 0
+                  ? "Brak nawyków pasujących do wybranych filtrów"
+                  : "Brak nawyków na wybrany dzień"}
+              </Text>
+            </View>
+          ) : (
+            habitsForSelectedDate.map((habit) => (
+              <HabitItem
+                key={habit.id}
+                habit={habit}
+                isCompleted={isHabitCompletedOnDate(habit.id, selectedDate)}
+                onToggle={handleToggleHabit}
+                onEdit={(habit) =>
+                  router.push(`/(tabs)/habits/EditHabitScreen?id=${habit.id}`)
+                }
+                onDelete={(habit) => handleDeleteHabit(habit.id)}
+                getHabitStreak={getHabitStreak}
+              />
+            ))
+          )}
+        </ScrollView>
+      </View>
 
-                <Text style={styles.habitFrequency}>
-                  {habit.frequency === "daily"
-                    ? "Codziennie"
-                    : habit.frequency === "weekly"
-                    ? "Tygodniowo"
-                    : `Niestandardowe: ${habit.customDays.join(", ")}`}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.checkbox,
-                  isHabitCompletedOnDate(habit.id, today) &&
-                    styles.checkboxCompleted,
-                ]}
-              >
-                {isHabitCompletedOnDate(habit.id, today) && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Tag Filter Modal */}
       <Modal
         visible={showTagModal}
         animationType="slide"
@@ -191,7 +194,6 @@ export default function Habits() {
             </TouchableOpacity>
           </View>
 
-          {/* Add new tag */}
           <View style={styles.addTagSection}>
             <TextInput
               style={styles.tagInput}
@@ -209,7 +211,6 @@ export default function Habits() {
             </TouchableOpacity>
           </View>
 
-          {/* Filter tags */}
           <Text style={styles.sectionTitle}>Filtruj według tagów:</Text>
           <ScrollView style={styles.tagsContainer}>
             {tags.map((tag) => (
@@ -234,7 +235,9 @@ export default function Habits() {
                   style={styles.deleteTagButton}
                   onPress={() => handleDeleteTag(tag)}
                 >
-                  <Text style={styles.deleteTagText}>🗑️</Text>
+                  <Text style={styles.deleteTagText}>
+                    <Ionicons name="trash-outline" size={32} color="black" />
+                  </Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -332,99 +335,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
-  emptyButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  emptyButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  habitItem: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  habitCompleted: {
-    backgroundColor: "#f0f9ff",
-    borderLeftWidth: 4,
-    borderLeftColor: "#007AFF",
-  },
-  habitContent: {
-    flex: 1,
-  },
-  habitHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  habitName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-    flex: 1,
-  },
-  habitNameCompleted: {
-    textDecorationLine: "line-through",
-    color: "#666",
-  },
-  streakContainer: {
-    marginLeft: 8,
-  },
-  streakText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  habitTags: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 8,
-  },
-  habitTag: {
-    backgroundColor: "#e0e0e0",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  habitFrequency: {
-    fontSize: 14,
-    color: "#666",
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 12,
-  },
-  checkboxCompleted: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  // Modal styles
   modalContainer: {
     flex: 1,
     backgroundColor: "#f5f5f5",

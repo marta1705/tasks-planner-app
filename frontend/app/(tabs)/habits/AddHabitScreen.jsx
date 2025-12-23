@@ -1,22 +1,26 @@
-import { useRouter, useFocusEffect } from "expo-router";
-import { useState, useCallback } from "react";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  Button,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  Platform,
-  Keyboard,
-  TouchableWithoutFeedback,
-  ScrollView,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useTags } from "../../../context/TagsContext";
+import ColorPicker, { HueSlider, Preview } from "reanimated-color-picker";
 import { useHabits } from "../../../context/HabitContext";
+import { useTags } from "../../../context/TagsContext";
 
 export default function AddHabitScreen() {
   const [name, setName] = useState("");
@@ -26,9 +30,31 @@ export default function AddHabitScreen() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [frequency, setFrequency] = useState("daily");
   const [customDays, setCustomDays] = useState([]);
+  const [selectedColor, setSelectedColor] = useState("#007AFF");
+  const [selectedIcon, setSelectedIcon] = useState("💪");
+  const [newTag, setNewTag] = useState("");
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState(new Date());
+  const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
+
   const router = useRouter();
   const { addHabit } = useHabits();
-  const { tags } = useTags();
+  const { tags, addTag } = useTags();
+
+  const icons = [
+    "💪",
+    "🏃",
+    "📚",
+    "🧘",
+    "💧",
+    "🎯",
+    "✍️",
+    "🎨",
+    "🎵",
+    "🍎",
+    "🦵",
+    "🧠",
+  ];
 
   const formatDate = (date) => {
     const day = date.getDate().toString().padStart(2, "0");
@@ -37,11 +63,29 @@ export default function AddHabitScreen() {
     return `${year}-${month}-${day}`;
   };
 
+  const handleAddTag = () => {
+    if (newTag.trim()) {
+      addTag(newTag);
+      setNewTag("");
+    }
+  };
+
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setDate(selectedDate);
       setStartDate(formatDate(selectedDate));
+    }
+  };
+
+  const onColorChanged = ({ hex }) => {
+    setSelectedColor(hex);
+  };
+
+  const onReminderTimeChange = (event, selectedTime) => {
+    setShowReminderTimePicker(Platform.OS === "ios");
+    if (selectedTime) {
+      setReminderTime(selectedTime);
     }
   };
 
@@ -56,27 +100,15 @@ export default function AddHabitScreen() {
     );
   };
 
+  const toggleTimePicker = () => {
+    setShowReminderTimePicker((prev) => !prev);
+    Keyboard.dismiss();
+  };
+
   const toggleCustomDay = (day) => {
     setCustomDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
-  };
-
-  const handleAddHabit = () => {
-    if (
-      name.trim() &&
-      startDate.trim() &&
-      (frequency !== "custom" || customDays.length > 0)
-    ) {
-      addHabit({
-        name,
-        startDate,
-        frequency,
-        customDays: frequency === "custom" ? customDays : [],
-        hashtags: selectedTags,
-      });
-      router.back();
-    }
   };
 
   const handleKeyboardDismiss = () => {
@@ -85,9 +117,108 @@ export default function AddHabitScreen() {
 
   const days = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
 
+  const scheduleReminder = async (habitName) => {
+    if (!Device.isDevice) {
+      Alert.alert(
+        "Błąd",
+        "Powiadomienia działają tylko na fizycznym urządzeniu"
+      );
+      return null;
+    }
+
+    // zgoda na powiadomienia
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") {
+      Alert.alert("Błąd", "Brak pozwolenia na wysyłanie powiadomień");
+      return null;
+    }
+
+    // mapowanie dni na wartości liczbowe (w expo-notifications: 1 = niedziela)
+    const selectedDaysForReminder =
+      frequency === "custom"
+        ? customDays
+        : frequency === "daily"
+        ? days
+        : ["Pon"];
+
+    if (selectedDaysForReminder.length === 0) {
+      Alert.alert("Błąd", "Nie wybrano żadnych dni dla przypomnienia!");
+      return null;
+    }
+
+    const dayMap = { Pon: 2, Wt: 3, Śr: 4, Czw: 5, Pt: 6, Sob: 7, Nd: 1 };
+    const weekdays = selectedDaysForReminder.map((day) => dayMap[day]);
+
+    const trigger = {
+      hour: reminderTime.getHours(),
+      minute: reminderTime.getMinutes(),
+      repeats: true,
+    };
+
+    if (frequency !== "daily") {
+      trigger.weekday = weekdays;
+    } else {
+      trigger.type = Notifications.SchedulableTriggerInputTypes.DAILY;
+    }
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `HALO! Czas na Twój nawyk!`,
+        body: `${habitName} czeka na Ciebie!`,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger,
+    });
+
+    return notificationId;
+  };
+
+  const handleAddHabit = async () => {
+    if (
+      name.trim() &&
+      startDate.trim() &&
+      (frequency !== "custom" || customDays.length > 0)
+    ) {
+      let notificationId = null;
+
+      if (reminderEnabled) {
+        notificationId = await scheduleReminder(name);
+      }
+
+      addHabit({
+        name,
+        startDate,
+        frequency,
+        customDays: frequency === "custom" ? customDays : [],
+        hashtags: selectedTags,
+        color: selectedColor,
+        icon: selectedIcon,
+        reminderEnabled,
+        reminderTime: `${reminderTime
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${reminderTime
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`,
+        notificationId,
+      });
+      router.back();
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -101,7 +232,6 @@ export default function AddHabitScreen() {
 
       <TouchableWithoutFeedback onPress={handleKeyboardDismiss}>
         <ScrollView style={styles.scrollContent}>
-          {/* Form Card */}
           <View style={styles.formCard}>
             <Text style={styles.label}>Nazwa nawyku</Text>
             <TextInput
@@ -113,6 +243,36 @@ export default function AddHabitScreen() {
               returnKeyType="done"
               placeholderTextColor="#999"
             />
+
+            <Text style={styles.label}>Wybierz kolor</Text>
+            <ColorPicker
+              value={selectedColor}
+              onCompleteJS={onColorChanged}
+              style={{ height: 100 }}
+            >
+              <Preview
+                hideInitialColor
+                style={{ height: 40, marginBottom: 10 }}
+              />
+              <HueSlider />
+            </ColorPicker>
+
+            <Text style={styles.label}>Wybierz ikonę</Text>
+            <View style={styles.iconContainer}>
+              {icons.map((icon) => (
+                <TouchableOpacity
+                  key={icon}
+                  style={[
+                    styles.iconButton,
+                    selectedIcon === icon && styles.iconButtonSelected,
+                    selectedIcon === icon && { borderColor: selectedColor },
+                  ]}
+                  onPress={() => setSelectedIcon(icon)}
+                >
+                  <Text style={styles.iconText}>{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={styles.label}>Data startu</Text>
             <Pressable onPress={toggleDatePicker}>
@@ -139,18 +299,38 @@ export default function AddHabitScreen() {
             )}
 
             <Text style={styles.label}>Hashtagi</Text>
+            <View style={styles.addTagSection}>
+              <TextInput
+                style={styles.tagInput}
+                value={newTag}
+                onChangeText={setNewTag}
+                placeholder="Dodaj nowy tag..."
+                onSubmitEditing={handleAddTag}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addTagButton,
+                  { backgroundColor: selectedColor },
+                ]}
+                onPress={handleAddTag}
+              >
+                <Text style={styles.addTagButtonText}>Dodaj</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.tagContainer}>
               {tags.length === 0 ? (
-                <Text style={styles.emptyTagsText}>
-                  Brak dostępnych tagów. Utwórz je w głównym ekranie.
-                </Text>
+                <Text style={styles.emptyTagsText}>Brak utworzonych tagów</Text>
               ) : (
                 tags.map((tag) => (
                   <TouchableOpacity
                     key={tag}
                     style={[
                       styles.tag,
-                      selectedTags.includes(tag) && styles.tagSelected,
+                      selectedTags.includes(tag) && {
+                        backgroundColor: selectedColor,
+                        borderColor: selectedColor,
+                      },
                     ]}
                     onPress={() => toggleTagSelection(tag)}
                   >
@@ -190,7 +370,10 @@ export default function AddHabitScreen() {
                       key={day}
                       style={[
                         styles.dayButton,
-                        customDays.includes(day) && styles.dayButtonSelected,
+                        customDays.includes(day) && {
+                          backgroundColor: selectedColor,
+                          borderColor: selectedColor,
+                        },
                       ]}
                       onPress={() => toggleCustomDay(day)}
                     >
@@ -207,13 +390,61 @@ export default function AddHabitScreen() {
                 </View>
               </>
             )}
+
+            <Text style={styles.label}>Przypomnienia</Text>
+            <Pressable
+              style={[styles.checkboxContainer]}
+              onPress={() => setReminderEnabled(!reminderEnabled)}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  { borderColor: selectedColor },
+                  reminderEnabled && styles.checkboxChecked,
+                  reminderEnabled && {
+                    backgroundColor: selectedColor,
+                    borderColor: selectedColor,
+                  },
+                ]}
+              >
+                {reminderEnabled && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>Włącz przypomnienia</Text>
+            </Pressable>
+
+            {reminderEnabled && (
+              <>
+                <Text style={styles.label}>Czas przypomnienia</Text>
+                <Pressable
+                  onPress={toggleTimePicker}
+                  style={styles.timeInputContainer}
+                >
+                  <Text style={styles.timeInput}>
+                    {reminderTime.getHours().toString().padStart(2, "0")}:
+                    {reminderTime.getMinutes().toString().padStart(2, "0")}
+                  </Text>
+                </Pressable>
+
+                {showReminderTimePicker && (
+                  <DateTimePicker
+                    value={reminderTime}
+                    mode="time"
+                    themeVariant="light"
+                    is24Hour={true}
+                    placeholder="Wybierz czas prypmomnienia"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onReminderTimeChange}
+                  />
+                )}
+              </>
+            )}
           </View>
 
-          {/* Add Button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
                 styles.addButton,
+                { backgroundColor: selectedColor },
                 (!name.trim() ||
                   !startDate.trim() ||
                   (frequency === "custom" && customDays.length === 0)) &&
@@ -231,7 +462,7 @@ export default function AddHabitScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -264,7 +495,7 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   placeholder: {
-    width: 80, // To balance the header
+    width: 80,
   },
   scrollContent: {
     flex: 1,
@@ -339,10 +570,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  tagSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
   tagText: {
     color: "#333",
     fontSize: 14,
@@ -367,10 +594,6 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     minWidth: 50,
     alignItems: "center",
-  },
-  dayButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
   },
   dayText: {
     color: "#333",
@@ -403,5 +626,100 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  iconContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 20,
+    gap: 5,
+  },
+  iconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  iconButtonSelected: {
+    backgroundColor: "#fff",
+    borderWidth: 3,
+  },
+  iconText: {
+    fontSize: 28,
+  },
+  addTagSection: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    marginBottom: 20,
+  },
+  tagInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: "#fff",
+  },
+  addTagButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addTagButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxChecked: {
+    backgroundColor: "#007AFF",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: "#000",
+    fontWeight: "500",
+  },
+  timeInputContainer: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginBottom: 20,
+    padding: 12,
+    alignItems: "center",
+  },
+  timeInput: {
+    fontSize: 16,
+    color: "#000",
   },
 });

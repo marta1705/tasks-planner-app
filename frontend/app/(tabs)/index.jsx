@@ -20,6 +20,7 @@ export default function Index() {
     React.useCallback(() => {
       let active = true;
 
+      
       (async () => {
         if (auth.currentUser) {
           try {

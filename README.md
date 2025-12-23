@@ -1,7 +1,9 @@
 # tasks-planner-app
 
-Starting project: cmd:
-npx expo install expo-calendar
+
+START: 
+Go to /frontend folder. 
+npm install
 
 
 Add:

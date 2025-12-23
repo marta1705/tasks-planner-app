@@ -6,7 +6,7 @@ import { Alert } from "react-native";
 // 🚩 WAŻNE: Popraw ścieżki do Twojej struktury plików
 import { db } from "../services/firebase"; // Upewniamy się, że importujemy zainicjalizowaną instancję
 import { useAuth } from "./AuthContext";
-import { usePet } from "./PetContext";
+import { usePet } from "./PetContext"; // ✅ UPEWNIAMY SIĘ, ŻE JEST IMPORT
 // ------------------------------------------------------------------------------------------------
 
 import {
@@ -40,17 +40,33 @@ export const TASK_ICONS = [
     { icon: "📞", label: "Telefon" },
 ];
 
+// ✅ NOWE STAŁE PUNKTACJI (OPARTE NA ZAPISANYM PRIORYTECIE ZADANIA)
+// Nagrody w Smaczkach (tylko W TERMINIE)
+const REWARD_CONFIG = {
+    low: 1,      
+    medium: 2,   
+    urgent: 3,   
+    overdue: 4, 
+};
+// Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
+const PENALTY_CONFIG = {
+    low: 5,      
+    medium: 5,   
+    urgent: 10,  
+    overdue: 15, 
+};
 // ---------------------------------------------------------------------------------------
 
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
-  const { addPoints, removePoints } = usePet(); 
   
-  // 🚩 POBIERANIE ID UŻYTKOWNIKA I STANU ŁADOWANIA Z AUTHCONTEXT
-  const { user, loading: authLoading } = useAuth(); // Zmieniono na 'user', żeby było spójne
-  const userId = user?.uid; // Wyciągamy userId
+  // ZMIANA: Importujemy nowe funkcje
+  const { addTreats, removeTreats, removeHealthPoints } = usePet(); 
+  
+  const { user, loading: authLoading } = useAuth(); 
+  const userId = user?.uid; 
   const [tasksLoading, setTasksLoading] = useState(true);
 
   // Funkcja pomocnicza do tworzenia referencji do KOLEKCJI zadań użytkownika
@@ -68,7 +84,6 @@ export function TaskProvider({ children }) {
         return;
     }
 
-    // 🚩 KOREKTA BLOKADY: Sprawdzenie, czy db jest zainicjalizowane przed użyciem
     if (!db) { 
         console.error("TASK CONTEXT FATAL: Firestore DB nie jest zainicjalizowane.");
         setTasksLoading(false);
@@ -76,7 +91,7 @@ export function TaskProvider({ children }) {
     }
 
     const tasksRef = getTasksCollectionRef();
-    if (!tasksRef) return; // Podwójne zabezpieczenie
+    if (!tasksRef) return; 
 
     const q = query(tasksRef, orderBy("createdAt", "desc")); 
 
@@ -151,12 +166,10 @@ export function TaskProvider({ children }) {
         const { id, ...dataToUpdate } = updatedTask; 
         await updateDoc(taskDocRef, dataToUpdate);
         
-        // 🚩 DODANY LOG SUKCESU
         console.log(`[FIREBASE] Pomyślnie zaktualizowano zadanie: ${updatedTask.id}`); 
         
     } catch (e) {
         console.error("Błąd aktualizacji Firebase: ", e);
-        // Logowanie BŁĘDU
         console.error(`[FIREBASE ERROR] Nie udało się zaktualizować zadania: ${updatedTask.id}`); 
         Alert.alert("Błąd Aktualizacji", "Nie udało się zapisać zmian w chmurze.");
     }
@@ -177,53 +190,65 @@ export function TaskProvider({ children }) {
     }
   };
   
-  // --- OZNACZANIE JAKO UKOŃCZONE (używa updateTask) ---
-  const completeTask = (taskId) => {
-    // 🚩 DODANY LOG STARTU
-    console.log(`[TASK ACTION] Uruchomiono completeTask dla ID: ${taskId}`); 
-    // ... (Logika punktów i statusu bez zmian) ...
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => {
-        if (task.id === taskId) {
-          const wasCompleted = task.isCompleted;
-          const newCompleted = !wasCompleted;
+  // =================================================================
+  // ✅ NOWA LOGIKA: ZNACZNIK UKOŃCZENIA (NIEODWRACALNY + NAGRODA/KARA)
+  // =================================================================
+  const completeTask = async (taskId) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    
+    // 🚨 LOGIKA NIEODWRACALNOŚCI: Nie pozwalamy cofnąć zadania!
+    if (task.isCompleted) {
+        Alert.alert("Zadanie już wykonane", "Nie można cofnąć wykonania zadania, aby zapobiec nadużyciom.");
+        return; 
+    }
 
-          const todayString = new Date().toISOString().split("T")[0];
-          const isOnTime = task.deadline >= todayString;
-          
-          if (newCompleted) {
-            if (isOnTime) {
-              addPoints(5);
-            } else {
-              addPoints(2);
-            }
-          } else {
-            if (isOnTime) {
-              removePoints(5);
-            } else {
-              removePoints(5);
-            }
-          }
+    const todayString = new Date().toISOString().split("T")[0];
+    const isOverdue = task.deadline < todayString;
+    
+    // Używamy ZAPISANEGO priorytetu (low, medium, urgent, overdue)
+    const taskPriority = task.priority; 
+    
+    const rewardAmount = REWARD_CONFIG[taskPriority] || 0;
+    const penaltyAmount = PENALTY_CONFIG[taskPriority] || 0;
 
-          const updatedFields = {
-            isCompleted: newCompleted,
-            completedAt: newCompleted ? new Date().toISOString() : null,
-            // 🚩 NOWA FLAGA SPRAWDZAJĄCA, CZY ZROBIONE PRZED DEADLINE
-            wasOnTime: newCompleted ? isOnTime : false, 
-          };
-          
-          if (task.id) {
-              updateTask({ id: task.id, ...updatedFields }); 
-          }
+    // --- LOGIKA NAGRODA / KARA ---
+    if (!isOverdue) { 
+      // 1. Zrobione W TERMINIE -> Nagroda (Smaczki)
+      if (rewardAmount > 0) {
+        addTreats(rewardAmount);
+        console.log(`[REWARD] +${rewardAmount} smaczków za priorytet: ${taskPriority}`);
+      }
+    } else {
+      // 2. Zrobione PO TERMINIE -> Kara (XP/Zdrowie)
+      if (penaltyAmount > 0) {
+        removeHealthPoints(penaltyAmount); 
+        console.log(`[PENALTY] -${penaltyAmount} XP (zdrowia) za przeterminowane zadanie o priorytecie: ${taskPriority}`);
+      }
+    }
 
-          return { ...task, ...updatedFields };
-        }
-        return task;
-      })
+    const updatedFields = {
+      isCompleted: true, // Zawsze ustawiamy na TRUE
+      completedAt: new Date().toISOString(),
+      wasOnTime: !isOverdue, 
+    };
+
+    // Optymistyczna aktualizacja UI
+    setTasks((prevTasks) => 
+        prevTasks.map((t) => 
+            t.id === taskId ? { ...t, ...updatedFields } : t
+        )
     );
+    
+    // Aktualizacja w bazie danych
+    if (task.id) {
+        await updateTask({ id: task.id, ...updatedFields }); 
+    }
   };
 
-  // ... (funkcje pomocnicze bez zmian) ...
+
+  // --- FUNKCJE POMOCNICZE (getTaskPriority, itp.) ---
+
   const getTasksByCategory = (selectedTags = []) => {
     const today = new Date().toISOString().split("T")[0];
 
@@ -270,7 +295,7 @@ export function TaskProvider({ children }) {
     const deadline = task.deadline;
 
     if (deadline < today) return "overdue";
-    if (deadline === today) return "today";
+    if (deadline === today) return "urgent"; // Dziś traktujemy jako urgent
 
     const daysUntil = Math.ceil(
       (new Date(deadline) - new Date(today)) / (1000 * 60 * 60 * 24)
@@ -298,7 +323,7 @@ export function TaskProvider({ children }) {
         addTask,
         updateTask,
         deleteTask,
-        completeTask, 
+        completeTask, // Zaktualizowana funkcja
         getTasksByCategory,
         getTaskPriority,
         getDaysUntilDeadline,
