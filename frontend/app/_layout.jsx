@@ -1,7 +1,7 @@
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -69,15 +69,11 @@ export default function RootLayout() {
     <AuthProvider>
       <ThemeProvider>
         <PetProvider>
-          <RootLayoutNav />
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <RootLayoutNav />
+          </GestureHandlerRootView>
         </PetProvider>
       </ThemeProvider>
-
-      <PetProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <RootLayoutNav />
-        </GestureHandlerRootView>
-      </PetProvider>
     </AuthProvider>
   );
 }
