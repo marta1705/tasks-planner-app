@@ -61,7 +61,8 @@ export default function Index() {
         <Ionicons name="settings-outline" size={22} color="white" />
         <Text style={styles.settingsButtonText}>Ustawienia</Text>
       </TouchableOpacity>
-      <Text style={[styles.text, { color: colors.text }]}>{`Witaj ${userName}`}</Text>
+      <Text style={[styles.text, { color: colors.text }]}>{`Witaj, ${userName}!`}</Text>
+      <Text style={[styles.text2, { color: colors.text2 }]}>Dziś jest Twój dzień!</Text>
       <PetWidget />
       <FloatingAction
         actions={actions}
@@ -84,12 +85,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     //backgroundColor: "#f5f5f5",
   },
-  text: {
-    fontSize: 42,
-    textAlign: "center",
-    fontWeight: "bold",
-    marginBottom: 15,
-  },
+text: {
+  fontSize: 20,
+  color: "#61ADE1",
+  fontFamily: "AlfaSlabOne",
+  marginBottom: 15,
+  alignSelf: "flex-start",  
+  textAlign: "left",        
+  paddingHorizontal: 20,    
+},
+
+text2: {
+  fontSize: 12,
+  fontFamily: "AlfaSlabOne",
+  color: "#61ADE1",
+  marginBottom: 15,
+  alignSelf: "flex-start",  
+  textAlign: "left",        
+  paddingHorizontal: 20,    
+},
+
   logoutButton: {
     backgroundColor: "#ff4444",
     paddingVertical: 12,
@@ -106,7 +121,7 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "left",
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: "#1e74c4ff",
