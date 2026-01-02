@@ -244,7 +244,7 @@ export default function PetWidget() {
             />
           </View>
           <Text style={styles.healthText}>
-            {petHealth}/100 ({petStatus.status})
+            {petHealth}/100
           </Text>
         </View>
 
@@ -332,14 +332,24 @@ export default function PetWidget() {
 }
 
 const styles = StyleSheet.create({
-  container: { width: "100%", paddingHorizontal: 20, alignItems: "center" },
+  container: { width: "100%", alignItems: "center", marginBottom: -120 },
   loadingText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
     paddingVertical: 30,
   },
-  card: {   backgroundColor: "#61ADE1", width: "100%", borderRadius: 20, padding: 20, alignItems: "center", elevation: 5 },
+card: {
+  backgroundColor: "#61ADE1",
+  width: "100%",
+  borderTopLeftRadius: 40,   
+  borderTopRightRadius: 40,  
+  borderBottomLeftRadius: 0, 
+  borderBottomRightRadius: 0,
+  padding: 80,
+  alignItems: "center",
+  elevation: 5,
+},
   petImage: { width: 300, height: 300, borderRadius: 20 },
   videoContainer: { width: 300, height: 300, borderRadius: 20, overflow: "hidden" },
   videoFull: { ...StyleSheet.absoluteFillObject },
@@ -350,10 +360,10 @@ const styles = StyleSheet.create({
   nameEditContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
   nameInput: { fontSize: 24, fontWeight: "bold", borderBottomWidth: 2, borderBottomColor: "#007AFF", minWidth: 150, textAlign: "center" },
   petName: {   fontSize: 24, fontWeight: "bold", marginBottom: 15, color: "#fff" },
-  healthBarContainer: { width: "100%", marginBottom: 15 },
+  healthBarContainer: { width: "100%", marginBottom: 35 },
   healthBarBackground: { width: "100%", height: 24, backgroundColor: "#E0E0E0", borderRadius: 12, overflow: "hidden" },
   healthBarFill: { height: "100%", borderRadius: 12 },
-  healthText: { textAlign: "center", marginTop: 6 },
+  healthText: { textAlign: "center", marginTop: 6, color: "#fff", fontWeight: "600" },
 
   // STYLE DLA SMACZKÓW
   treatsContainer: {

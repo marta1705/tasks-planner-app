@@ -60,7 +60,7 @@ export default function Index() {
         onPress={() => router.push("/settings")}>
         <Ionicons name="settings-outline" size={30} color="white" />
       </TouchableOpacity>
-      <Text style={[styles.text, { fontFamily: "AlfaSlabOne", fontSize: 20 }]}>
+      <Text style={[styles.text, { fontFamily: "AlfaSlabOne", fontSize: 20, marginVertical: 20 }]}>
         <Text style={{ color: "#61ADE1" }}>Witaj, {userName}!</Text>
       </Text>
       <Text style={[styles.text2, { color: colors.text2 }]}><Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text></Text>
@@ -91,20 +91,16 @@ text: {
   color: "#61ADE1",
   fontFamily: "AlfaSlabOne",
   marginBottom: 15,
-  alignSelf: "flex-start",  
-  textAlign: "left",        
-  paddingHorizontal: 20,    
+  textAlign: "center",
 },
 
 text2: {
   fontSize: 12,
   fontFamily: "AlfaSlabOne",
-  color: "#61ADE1",
   marginBottom: 15,
-  alignSelf: "flex-start",  
-  textAlign: "left",        
-  paddingHorizontal: 20,    
+  textAlign: "center",
 },
+
 
   logoutButton: {
     backgroundColor: "#ff4444",
