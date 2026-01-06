@@ -115,79 +115,82 @@ export default function LoginScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-
           {/* HEADER */}
-<View style={styles.topSection}>
-  <Text style={styles.title}>Witaj!</Text>
-</View>
-        {/* PIES – WARSTWA */}
+          <View style={styles.topSection}>
+            <Text style={styles.title}>Witaj!</Text>
+          </View>
+          {/* PIES – WARSTWA */}
           <Image
             source={require("../assets/images/dog_login_without_background_smaller.png")}
             style={styles.dogFloating}
           />
 
           {/* NIEBIESKI PANEL */}
-            <View style={styles.bluePanel}>
-              <View style={styles.formWrapper}>
-            <Text style={styles.panelTitle}>Zaloguj się</Text>
+          <View style={styles.bluePanel}>
+            <View style={styles.formWrapper}>
+              <Text style={styles.panelTitle}>Zaloguj się</Text>
 
-            {/* ERROR */}
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>⚠️ {error}</Text>
-              </View>
-            ) : null}
+              {/* ERROR */}
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️ {error}</Text>
+                </View>
+              ) : null}
 
-            {/* EMAIL */}
-            <Text style={styles.label}>E-mail:</Text>
-            <TextInput
-              placeholder=""
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setError("");
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.input}
-            />
+              {/* EMAIL */}
+              <Text style={styles.label}>E-mail:</Text>
+              <TextInput
+                placeholder=""
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setError("");
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
 
-            {/* PASSWORD */}
-            <Text style={styles.label}>Hasło:</Text>
-            <TextInput
-              placeholder=""
-              secureTextEntry
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setError(""); 
-              }}
-              style={styles.input}
-            />
+              {/* PASSWORD */}
+              <Text style={styles.label}>Hasło:</Text>
+              <TextInput
+                placeholder=""
+                secureTextEntry
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setError("");
+                }}
+                style={styles.input}
+              />
 
-            {/* FORGOT PASSWORD */}
-            <TouchableOpacity
-              onPress={() => setResetModalVisible(true)}
-              style={{ alignSelf: "flex-end", marginBottom: 20 }}
-            >
-              <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
-            </TouchableOpacity>
+              {/* FORGOT PASSWORD */}
+              <TouchableOpacity
+                onPress={() => setResetModalVisible(true)}
+                style={{ alignSelf: "flex-end", marginBottom: 20 }}
+              >
+                <Text style={styles.forgotText}>Nie pamiętam hasła</Text>
+              </TouchableOpacity>
 
-            {/* LOGIN BUTTON */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>ZALOGUJ SIĘ</Text>
-            </TouchableOpacity>
+              {/* LOGIN BUTTON */}
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleLogin}
+              >
+                <Text style={styles.loginButtonText}>ZALOGUJ SIĘ</Text>
+              </TouchableOpacity>
 
-            {/* REGISTER */}
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={() => router.replace("/register")}
-            >
-              <Text style={styles.registerButtonText}>
-                Nie masz konta? <Text style={styles.registerLink}>Zarejestruj się</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {/* REGISTER */}
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => router.replace("/register")}
+              >
+                <Text style={styles.registerButtonText}>
+                  Nie masz konta?{" "}
+                  <Text style={styles.registerLink}>Zarejestruj się</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -201,25 +204,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-topSection: {
-  backgroundColor: "#fff",
-  alignItems: "center",
-  paddingTop: 60,
-  paddingBottom: 20,
-  zIndex: 20,
-},
+  topSection: {
+    backgroundColor: "#fff",
+    alignItems: "center",
+    paddingTop: 60,
+    paddingBottom: 20,
+    zIndex: 20,
+  },
 
-
-dogFloating: {
-  width: 230,
-  height: 230,
-  resizeMode: "contain",
-  position: "absolute",
-  top: 120,           // reguluje „zanurzenie”
-  alignSelf: "center",
-  zIndex: 5,
-},
-
+  dogFloating: {
+    width: 230,
+    height: 230,
+    resizeMode: "contain",
+    position: "absolute",
+    top: 120, // reguluje „zanurzenie”
+    alignSelf: "center",
+    zIndex: 5,
+  },
 
   title: {
     fontSize: 36,
@@ -228,24 +229,23 @@ dogFloating: {
     letterSpacing: 3,
   },
 
-bluePanel: {
-  flex: 1,
-  backgroundColor: "#61ADE1",
-  borderTopLeftRadius: 40,
-  borderTopRightRadius: 40,
-  paddingTop: 70,    // ⬅️ miejsce na głowę psa
-  paddingHorizontal: 32,
-  marginTop: 160,     // ⬅️ WCHODZI NA PSA
-  paddingBottom: 40,
-  zIndex: 10,
-},
+  bluePanel: {
+    flex: 1,
+    backgroundColor: "#61ADE1",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingTop: 70, // ⬅️ miejsce na głowę psa
+    paddingHorizontal: 32,
+    marginTop: 160, // ⬅️ WCHODZI NA PSA
+    paddingBottom: 40,
+    zIndex: 10,
+  },
 
   formWrapper: {
     width: "100%",
-    maxWidth: 800,        
+    maxWidth: 800,
     alignSelf: "center",
   },
-
 
   panelTitle: {
     fontSize: 32,
@@ -302,7 +302,7 @@ bluePanel: {
     fontSize: 15,
   },
 
-    registerLink: {
+  registerLink: {
     fontWeight: "700",
     textDecorationLine: "underline",
   },
