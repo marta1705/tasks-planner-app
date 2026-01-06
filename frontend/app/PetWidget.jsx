@@ -244,28 +244,27 @@ export default function PetWidget() {
             />
           </View>
           <Text style={styles.healthText}>
-            {petHealth}/100 ({petStatus.status})
+            {petHealth}/100
           </Text>
         </View>
 
-        {/* WIDŻET SMACZKÓW I KARMIENIA */}
-        <View style={styles.treatsContainer}>
-          <Text style={styles.treatsBalanceText}>
-            Smaczki: {treatsBalance.toFixed(1)} 🍬
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.feedButton,
-              (treatsBalance < 1 || petHealth >= 100) && styles.feedButtonDisabled
-            ]}
-            onPress={handleFeedPet}
-            disabled={treatsBalance < 1 || petHealth >= 100}
-          >
-            <Text style={styles.feedButtonText}>
-              {petHealth >= 100 ? "Najedzony" : `Nakarm (1 🍬)`}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* PRZYCISK SMACZKÓW / NAJEDZONY */}
+<TouchableOpacity
+  style={[
+    styles.treatsButton,
+    (treatsBalance < 1 || petHealth >= 100) && styles.treatsButtonDisabled
+  ]}
+  onPress={handleFeedPet}
+  disabled={treatsBalance < 1 || petHealth >= 100}
+>
+  <Text style={styles.treatsButtonText}>
+    {petHealth >= 100 || treatsBalance < 1
+      ? "Najedzony"
+      : `Daj smaczka (${treatsBalance.toFixed(1)})`}
+  </Text>
+</TouchableOpacity>
+
+
 
         {/* Modal wyboru pupila */}
         <Modal
@@ -333,14 +332,24 @@ export default function PetWidget() {
 }
 
 const styles = StyleSheet.create({
-  container: { width: "100%", paddingHorizontal: 20, marginVertical: 20, alignItems: "center" },
+  container: { width: "100%", alignItems: "center", marginBottom: -120 },
   loadingText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
     paddingVertical: 30,
   },
-  card: { width: "100%", backgroundColor: "#fff", borderRadius: 20, padding: 20, alignItems: "center", elevation: 5 },
+card: {
+  backgroundColor: "#61ADE1",
+  width: "100%",
+  borderTopLeftRadius: 40,   
+  borderTopRightRadius: 40,  
+  borderBottomLeftRadius: 0, 
+  borderBottomRightRadius: 0,
+  padding: 80,
+  alignItems: "center",
+  elevation: 5,
+},
   petImage: { width: 300, height: 300, borderRadius: 20 },
   videoContainer: { width: 300, height: 300, borderRadius: 20, overflow: "hidden" },
   videoFull: { ...StyleSheet.absoluteFillObject },
@@ -350,11 +359,11 @@ const styles = StyleSheet.create({
   nameDisplayContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
   nameEditContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
   nameInput: { fontSize: 24, fontWeight: "bold", borderBottomWidth: 2, borderBottomColor: "#007AFF", minWidth: 150, textAlign: "center" },
-  petName: { fontSize: 24, fontWeight: "bold", marginBottom: 15 },
-  healthBarContainer: { width: "100%", marginBottom: 15 },
+  petName: {   fontSize: 24, fontWeight: "bold", marginBottom: 15, color: "#fff" },
+  healthBarContainer: { width: "100%", marginBottom: 35 },
   healthBarBackground: { width: "100%", height: 24, backgroundColor: "#E0E0E0", borderRadius: 12, overflow: "hidden" },
   healthBarFill: { height: "100%", borderRadius: 12 },
-  healthText: { textAlign: "center", marginTop: 6 },
+  healthText: { textAlign: "center", marginTop: 6, color: "#fff", fontWeight: "600" },
 
   // STYLE DLA SMACZKÓW
   treatsContainer: {
@@ -370,8 +379,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FF9500',
   },
+
+  treatsButton: {
+  position: "absolute",
+  top: -20, // przesunięcie nad kartą pupila
+  right: 20, // po prawej stronie
+  backgroundColor: "#007AFF", // niebieskie tło
+  paddingVertical: 10,
+  paddingHorizontal: 15,
+  borderRadius: 20, // zaokrąglony
+  elevation: 5, // cień android
+  shadowColor: "#000", // cień iOS
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 3,
+},
+treatsButtonDisabled: {
+  backgroundColor: "#999", // szary, gdy nieaktywne
+},
+treatsButtonText: {
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: 16,
+},
+
   feedButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1BCE4B',
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 10,

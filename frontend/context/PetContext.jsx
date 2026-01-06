@@ -319,14 +319,14 @@ export function PetProvider({ children }) {
 
   const getPetStatus = () => {
     if (petHealth >= 80)
-      return { status: "excellent", emoji: "😊", color: "#4CAF50" };
+      return { status: "super", emoji: "😊", color: "#4CAF50" };
     if (petHealth >= 60)
-      return { status: "good", emoji: "🙂", color: "#8BC34A" };
+      return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
     if (petHealth >= 40)
-      return { status: "okay", emoji: "😐", color: "#FFC107" };
+      return { status: "okej", emoji: "😐", color: "#FFC107" };
     if (petHealth >= 20)
-      return { status: "poor", emoji: "😟", color: "#FF9800" };
-    return { status: "critical", emoji: "😢", color: "#F44336" };
+      return { status: "słabo", emoji: "😟", color: "#FF9800" };
+    return { status: "źle", emoji: "😢", color: "#F44336" };
   };
 
 

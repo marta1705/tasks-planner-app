@@ -6,8 +6,10 @@ import {
 } from "firebase/auth";
 import React from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -190,6 +192,68 @@ export default function LoginScreen() {
                   <Text style={styles.registerLink}>Zarejestruj się</Text>
                 </Text>
               </TouchableOpacity>
+
+              <Modal
+                visible={resetModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setResetModalVisible(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Zresetuj hasło</Text>
+
+                    {resetError ? (
+                      <View style={styles.errorBox}>
+                        <Text style={styles.errorText}>⚠️ {resetError}</Text>
+                      </View>
+                    ) : null}
+
+                    <TextInput
+                      placeholder="Adres email"
+                      value={resetEmail}
+                      onChangeText={(text) => {
+                        setResetEmail(text);
+                        setResetError("");
+                      }}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      style={styles.input}
+                    />
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        marginTop: 12,
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => {
+                          setResetModalVisible(false);
+                          setResetEmail("");
+                          setResetError("");
+                        }}
+                      >
+                        <Text style={styles.cancelButtonText}>Anuluj</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.resetButton}
+                        onPress={handlePasswordReset}
+                        disabled={resetLoading}
+                      >
+                        {resetLoading ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text style={styles.resetButtonText}>Wyślij</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
             </View>
           </View>
         </ScrollView>
@@ -319,5 +383,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+
+  /* Modal styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  modalContent: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+
+  resetButton: {
+    backgroundColor: "#0072C6",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    minWidth: 100,
+    alignItems: "center",
+  },
+
+  resetButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  cancelButton: {
+    backgroundColor: "#E3EEF7",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    minWidth: 100,
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  cancelButtonText: {
+    color: "#0072C6",
+    fontWeight: "700",
   },
 });
