@@ -40,7 +40,7 @@ export default function Index() {
     {
       text: "Dodaj zadanie",
       icon: <MaterialIcons name="add-task" size={24} color="#fff" />,
-      color: "#4CAF50", // kolor tła kółka
+      color: "#1BCE4B", // kolor tła kółka
       name: "bt_add_task",
       position: 1,
     },
@@ -58,14 +58,16 @@ export default function Index() {
       <TouchableOpacity
         style={styles.settingsButton}
         onPress={() => router.push("/settings")}>
-        <Ionicons name="settings-outline" size={22} color="white" />
-        <Text style={styles.settingsButtonText}>Ustawienia</Text>
+        <Ionicons name="settings-outline" size={30} color="white" />
       </TouchableOpacity>
-      <Text style={[styles.text, { color: colors.text }]}>{`Witaj ${userName}`}</Text>
+      <Text style={[styles.text, { fontFamily: "AlfaSlabOne", fontSize: 20, marginVertical: 20 }]}>
+        <Text style={{ color: "#61ADE1" }}>Witaj, {userName}!</Text>
+      </Text>
+      <Text style={[styles.text2, { color: colors.text2 }]}><Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text></Text>
       <PetWidget />
       <FloatingAction
         actions={actions}
-        color="#007AFF"
+        color="#275777"
         onPressItem={(name) => {
           if (name === "bt_add_task")
             router.push("/(tabs)/tasks/AddTaskScreen");
@@ -84,12 +86,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     //backgroundColor: "#f5f5f5",
   },
-  text: {
-    fontSize: 42,
-    textAlign: "center",
-    fontWeight: "bold",
-    marginBottom: 15,
-  },
+text: {
+  fontSize: 20,
+  color: "#61ADE1",
+  fontFamily: "AlfaSlabOne",
+  marginBottom: 15,
+  textAlign: "center",
+},
+
+text2: {
+  fontSize: 12,
+  fontFamily: "AlfaSlabOne",
+  marginBottom: 15,
+  textAlign: "center",
+},
+
+
   logoutButton: {
     backgroundColor: "#ff4444",
     paddingVertical: 12,
@@ -106,7 +118,7 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "left",
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: "#1e74c4ff",

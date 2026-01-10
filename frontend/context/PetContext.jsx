@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
 
@@ -32,59 +32,225 @@ const PET_OPTIONS = [
   {
     id: 1,
     name: "Piesek",
-    image: require("../assets/images/dog/starting_position/dog_starting_position.png"),
-    animations: [
-      require("../assets/images/dog/starting_position/video1_dog_starting_position.mp4"),
-      require("../assets/images/dog/starting_position/video2_dog_starting_position.mp4"),
-      require("../assets/images/dog/starting_position/video3_dog_starting_position.mp4"),
-      require("../assets/images/dog/starting_position/video4_dog_starting_position.mp4"),
-    ],
+    states: {
+      starting_position: {
+        image: require("../assets/images/dog/starting_position/dog_starting_position.png"),
+        animations: [
+          require("../assets/images/dog/starting_position/video1_dog_starting_position.mp4"),
+          require("../assets/images/dog/starting_position/video2_dog_starting_position.mp4"),
+          require("../assets/images/dog/starting_position/video3_dog_starting_position.mp4"),
+          require("../assets/images/dog/starting_position/video4_dog_starting_position.mp4"),
+        ],
+      },
+      wondering: {
+        image: require("../assets/images/dog/wondering/dog_wondering.png"),
+        animations: [
+          require("../assets/images/dog/wondering/video1_dog_wondering.mp4"),
+          require("../assets/images/dog/wondering/video2_dog_wondering.mp4"),
+          require("../assets/images/dog/wondering/video3_dog_wondering.mp4"),
+          require("../assets/images/dog/wondering/video4_dog_wondering.mp4"),
+        ],
+      },
+      rest: {
+        image: require("../assets/images/dog/rest/dog_rest.png"),
+        animations: [
+          require("../assets/images/dog/rest/video1_dog_rest.mp4"),
+          require("../assets/images/dog/rest/video2_dog_rest.mp4"),
+          require("../assets/images/dog/rest/video3_dog_rest.mp4"),
+          require("../assets/images/dog/rest/video4_dog_rest.mp4"),
+        ],
+      },
+      breakdown: {
+        image: require("../assets/images/dog/breakdown/dog_breakdown.png"),
+        animations: [
+          require("../assets/images/dog/breakdown/video1_dog_breakdown.mp4.png.mp4"),
+          require("../assets/images/dog/breakdown/video2_dog_breakdown.mp4.png.mp4"),
+          require("../assets/images/dog/breakdown/video3_dog_breakdown.mp4"),
+          require("../assets/images/dog/breakdown/video4_dog_breakdown.mp4"),
+        ],
+      },
+    },
   },
+
   {
     id: 2,
     name: "Kotek",
-    image: require("../assets/images/cat/starting_position/cat_starting_position.png"),
-    animations: [
-      require("../assets/images/cat/starting_position/video1_cat_starting_position.mp4"),
-      require("../assets/images/cat/starting_position/video2_cat_starting_position.mp4"),
-      require("../assets/images/cat/starting_position/video3_cat_starting_position.mp4"),
-      require("../assets/images/cat/starting_position/video4_cat_starting_position.mp4"),
-    ],
+    states: {
+      starting_position: {
+        image: require("../assets/images/cat/starting_position/cat_starting_position.png"),
+        animations: [
+          require("../assets/images/cat/starting_position/video1_cat_starting_position.mp4"),
+          require("../assets/images/cat/starting_position/video2_cat_starting_position.mp4"),
+          require("../assets/images/cat/starting_position/video3_cat_starting_position.mp4"),
+          require("../assets/images/cat/starting_position/video4_cat_starting_position.mp4"),
+        ],
+      },
+      wondering: {
+        image: require("../assets/images/cat/wondering/cat_wondering.png"),
+        animations: [
+          require("../assets/images/cat/wondering/video1_cat_wondering.mp4"),
+          require("../assets/images/cat/wondering/video2_cat_wondering.mp4"),
+          require("../assets/images/cat/wondering/video3_cat_wondering.mp4"),
+          require("../assets/images/cat/wondering/video4_cat_wondering.mp4"),
+        ],
+      },
+      rest: {
+        image: require("../assets/images/cat/rest/cat_rest.png"),
+        animations: [
+          require("../assets/images/cat/rest/video1_cat_rest.mp4"),
+          require("../assets/images/cat/rest/video2_cat_rest.mp4"),
+          require("../assets/images/cat/rest/video3_cat_rest.mp4"),
+          require("../assets/images/cat/rest/video4_cat_rest.mp4"),
+        ],
+      },
+      breakdown: {
+        image: require("../assets/images/cat/breakdown/cat_breakdown.png"),
+        animations: [
+          require("../assets/images/cat/breakdown/video1_cat_breakdown.mp4"),
+          require("../assets/images/cat/breakdown/video2_cat_breakdown.mp4"),
+          require("../assets/images/cat/breakdown/video3_cat_breakdown.mp4"),
+          require("../assets/images/cat/breakdown/video4_cat_breakdown.mp4"),
+        ],
+      },
+    },
   },
+
   {
     id: 3,
     name: "Kapibara",
-    image: require("../assets/images/capybara/starting_position/capybara_starting_position.png"),
-    animations: [
-      require("../assets/images/capybara/starting_position/video1_capybara_starting_position.mp4"),
-      require("../assets/images/capybara/starting_position/video2_capybara_starting_position.mp4"),
-      require("../assets/images/capybara/starting_position/video3_capybara_starting_position.mp4"),
-      require("../assets/images/capybara/starting_position/video4_capybara_starting_position.mp4"),
-    ],
+    states: {
+      starting_position: {
+        image: require("../assets/images/capybara/starting_position/capybara_starting_position.png"),
+        animations: [
+          require("../assets/images/capybara/starting_position/video1_capybara_starting_position.mp4"),
+          require("../assets/images/capybara/starting_position/video2_capybara_starting_position.mp4"),
+          require("../assets/images/capybara/starting_position/video3_capybara_starting_position.mp4"),
+          require("../assets/images/capybara/starting_position/video4_capybara_starting_position.mp4"),
+        ],
+      },
+      wondering: {
+        image: require("../assets/images/capybara/wondering/capybara_wondering.png"),
+        animations: [
+          require("../assets/images/capybara/wondering/video1_capybara_wondering.mp4"),
+          require("../assets/images/capybara/wondering/video2_capybara_wondering.mp4"),
+          require("../assets/images/capybara/wondering/video3_capybara_wondering.mp4"),
+          require("../assets/images/capybara/wondering/video4_capybara_wondering.mp4"),
+        ],
+      },
+      rest: {
+        image: require("../assets/images/capybara/rest/capybara_rest.png"),
+        animations: [
+          require("../assets/images/capybara/rest/video1_capybara_rest.mp4"),
+          require("../assets/images/capybara/rest/video2_capybara_rest.mp4"),
+          require("../assets/images/capybara/rest/video3_capybara_rest.mp4"),
+          require("../assets/images/capybara/rest/video4_capybara_rest.mp4"),
+        ],
+      },
+      breakdown: {
+        image: require("../assets/images/capybara/breakdown/capybara_breakdown.png"),
+        animations: [
+          require("../assets/images/capybara/breakdown/video1_capybara_breakdown.mp4"),
+          require("../assets/images/capybara/breakdown/video2_capybara_breakdown.mp4"),
+          require("../assets/images/capybara/breakdown/video3_capybara_breakdown.mp4"),
+          require("../assets/images/capybara/breakdown/video4_capybara_breakdown.mp4"),
+        ],
+      },
+    },
   },
+
   {
     id: 4,
     name: "Kaczuszka",
-    image: require("../assets/images/duck/starting_position/duck_starting_position.png"),
-    animations: [
-      require("../assets/images/duck/starting_position/video1_duck_starting_position.mp4"),
-      require("../assets/images/duck/starting_position/video2_duck_starting_position.mp4"),
-      require("../assets/images/duck/starting_position/video3_duck_starting_position.mp4"),
-      require("../assets/images/duck/starting_position/video4_duck_starting_position.mp4"),
-    ],
+    states: {
+      starting_position: {
+        image: require("../assets/images/duck/starting_position/duck_starting_position.png"),
+        animations: [
+          require("../assets/images/duck/starting_position/video1_duck_starting_position.mp4"),
+          require("../assets/images/duck/starting_position/video2_duck_starting_position.mp4"),
+          require("../assets/images/duck/starting_position/video3_duck_starting_position.mp4"),
+          require("../assets/images/duck/starting_position/video4_duck_starting_position.mp4"),
+        ],
+      },
+      wondering: {
+        image: require("../assets/images/duck/wondering/duck_wondering.png"),
+        animations: [
+          require("../assets/images/duck/wondering/video1_duck_wondering.mp4"),
+          require("../assets/images/duck/wondering/video2_duck_wondering.mp4"),
+          require("../assets/images/duck/wondering/video3_duck_wondering.mp4"),
+          require("../assets/images/duck/wondering/video4_duck_wondering.mp4"),
+        ],
+      },
+      rest: {
+        image: require("../assets/images/duck/rest/duck_rest.png"),
+        animations: [
+          require("../assets/images/duck/rest/video1_duck_rest.mp4"),
+          require("../assets/images/duck/rest/video2_duck_rest.mp4"),
+          require("../assets/images/duck/rest/video3_duck_rest.mp4"),
+          require("../assets/images/duck/rest/video4_duck_rest.mp4"),
+        ],
+      },
+      breakdown: {
+        image: require("../assets/images/duck/breakdown/duck_breakdown.png"),
+        animations: [
+          require("../assets/images/duck/breakdown/video1_duck_breakdown.mp4"),
+          require("../assets/images/duck/breakdown/video2_duck_breakdown.mp4"),
+          require("../assets/images/duck/breakdown/video3_duck_breakdown.mp4"),
+          require("../assets/images/duck/breakdown/video4_duck_breakdown.mp4"),
+        ],
+      },
+    },
   },
+
   {
     id: 5,
     name: "Rybka",
-    image: require("../assets/images/fish/starting_position/fish_starting_position.png"),
-    animations: [
-      require("../assets/images/fish/starting_position/video1_fish_starting_position.mp4"),
-      require("../assets/images/fish/starting_position/video2_fish_starting_position.mp4"),
-      require("../assets/images/fish/starting_position/video3_fish_starting_position.mp4"),
-      require("../assets/images/fish/starting_position/video4_fish_starting_position.mp4"),
-    ],
+    states: {
+      starting_position: {
+        image: require("../assets/images/fish/starting_position/fish_starting_position.png"),
+        animations: [
+          require("../assets/images/fish/starting_position/video1_fish_starting_position.mp4"),
+          require("../assets/images/fish/starting_position/video2_fish_starting_position.mp4"),
+          require("../assets/images/fish/starting_position/video3_fish_starting_position.mp4"),
+          require("../assets/images/fish/starting_position/video4_fish_starting_position.mp4"),
+        ],
+      },
+      wondering: {
+        image: require("../assets/images/fish/wondering/fish_wondering.png"),
+        animations: [
+          require("../assets/images/fish/wondering/video1_fish_wondering.mp4"),
+          require("../assets/images/fish/wondering/video2_fish_wondering.mp4"),
+          require("../assets/images/fish/wondering/video3_fish_wondering.mp4"),
+          require("../assets/images/fish/wondering/video4_fish_wondering.mp4"),
+        ],
+      },
+      rest: {
+        image: require("../assets/images/fish/rest/fish_rest.png"),
+        animations: [
+          require("../assets/images/fish/rest/video1_fish_rest.mp4"),
+          require("../assets/images/fish/rest/video2_fish_rest.mp4"),
+          require("../assets/images/fish/rest/video3_fish_rest.mp4"),
+          require("../assets/images/fish/rest/video4_fish_rest.mp4"),
+        ],
+      },
+      breakdown: {
+        image: require("../assets/images/fish/breakdown/video1_fish_breakdown.png"),
+        animations: [
+          require("../assets/images/fish/breakdown/fish_breakdown.mp4"),
+          require("../assets/images/fish/breakdown/video2_fish_breakdown.mp4"),
+          require("../assets/images/fish/breakdown/video3_fish_breakdown.mp4"),
+          require("../assets/images/fish/breakdown/video4_fish_breakdown.mp4"),
+        ],
+      },
+    },
   },
 ];
+
+const getVisualKeyByHealth = (hp) => {
+  if (hp >= 80) return "starting_position";
+  if (hp >= 60) return "wondering";
+  if (hp >= 40) return "rest";
+  return "breakdown";
+};
 
 export function PetProvider({ children }) {
   const [petHealth, setPetHealth] = useState(100);
@@ -129,6 +295,7 @@ export function PetProvider({ children }) {
     const unsubscribe = onSnapshot(petDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        setSelectedPetId(data.selectedPetId ?? 1);
 
         // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
         setPetName(data.petName || petName);
@@ -319,14 +486,14 @@ export function PetProvider({ children }) {
 
   const getPetStatus = () => {
     if (petHealth >= 80)
-      return { status: "excellent", emoji: "😊", color: "#4CAF50" };
+      return { status: "super", emoji: "😊", color: "#4CAF50" };
     if (petHealth >= 60)
-      return { status: "good", emoji: "🙂", color: "#8BC34A" };
+      return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
     if (petHealth >= 40)
-      return { status: "okay", emoji: "😐", color: "#FFC107" };
+      return { status: "okej", emoji: "😐", color: "#FFC107" };
     if (petHealth >= 20)
-      return { status: "poor", emoji: "😟", color: "#FF9800" };
-    return { status: "critical", emoji: "😢", color: "#F44336" };
+      return { status: "słabo", emoji: "😟", color: "#FF9800" };
+    return { status: "źle", emoji: "😢", color: "#F44336" };
   };
 
 
