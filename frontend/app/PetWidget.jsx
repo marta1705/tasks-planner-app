@@ -77,12 +77,33 @@ export default function PetWidget() {
 
   const petStatus = getPetStatus();
 
+    const visualKey =
+    petHealth >= 80 ? "starting_position" :
+    petHealth >= 60 ? "wondering" :
+    petHealth >= 40 ? "rest" :
+    "breakdown";
+
+    useEffect(() => {
+      setAnimationStep(0);
+      setCurrentAnimationIndex(0);
+      fadeIn();
+    }, [currentPet.id, visualKey]);
+
+  const currentVisual =
+    currentPet.states?.[visualKey] ??
+    currentPet.states?.rest ??
+    currentPet.states?.wondering ??
+    currentPet.states?.starting_position;
+
+  const animations = currentVisual?.animations ?? [];
+  const imageSource = currentVisual?.image ?? null;
+
   // LOGIKA ANIMACJI WIDEO
   const handleAnimationEnd = () => {
     fadeOut(() => {
       setAnimationStep(0);
       setCurrentAnimationIndex((prev) =>
-        prev + 1 < currentPet.animations.length ? prev + 1 : 0
+        prev + 1 < animations.length ? prev + 1 : 0
       );
       fadeIn();
     });
@@ -180,13 +201,13 @@ export default function PetWidget() {
       {/* Pet image / video */}
       <Animated.View style={{ opacity: fadeAnim }}>
         {animationStep === 0 ? (
-          <Image source={currentPet.image} style={styles.petImage} resizeMode="contain" />
+          <Image source={imageSource} style={styles.petImage} resizeMode="contain" />
         ) : (
           <View style={styles.videoContainer}>
             {/* OSTRZEŻENIE O EXPO-AV: Tego nie da się naprawić w tym pliku. */}
             <Video
               ref={videoRef}
-              source={currentPet.animations[currentAnimationIndex]}
+              source={animations[currentAnimationIndex]}
               style={styles.videoFull}
               isMuted
               resizeMode="cover"
