@@ -8,11 +8,11 @@ export const Colors = {
         border: '#E5E5EA',
     },
     dark: {
-        background: '#000000',
+        background: '#1800ad',
         text: '#FFFFFF',
-        card: '#1C1C1E',
-        tint: '#fff',
-        tabIconDefault: '#ccc',
+        card: '#1800ad',
+        tint: '#61ade1',
+        tabIconDefault: '#1800ad',
         border: '#2C2C2E',
     },
 };
