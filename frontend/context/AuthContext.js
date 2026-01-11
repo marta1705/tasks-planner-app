@@ -1,9 +1,8 @@
 // AuthProvider.js
-import { View, Text } from 'react-native';
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, updateDoc, getFirestore } from "firebase/firestore";
+import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db, initializeFirebaseClient } from "../services/firebase";
+import { auth } from "../services/firebase";
 
 const AuthContext = createContext();
 
@@ -14,6 +13,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [registering, setRegistering] = useState(false);
   const db = getFirestore();
 
@@ -43,9 +43,11 @@ export function AuthProvider({ children }) {
         }
 
         setLoading(false);
+        setInitialized(true);
       } catch (err) {
         console.log("Auth error:", err);
         setLoading(false);
+        setInitialized(true);
       }
     });
 
@@ -57,6 +59,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated: !!user,
     loading,
+    initialized,
     registering,
     setRegistering,
   };
