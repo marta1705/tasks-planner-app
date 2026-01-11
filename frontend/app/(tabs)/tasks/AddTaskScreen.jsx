@@ -18,9 +18,10 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Modal,
 } from "react-native";
 import { useTags } from "../../../context/TagsContext";
-import { PRIORITY_OPTIONS, TASK_ICONS, useTasks } from "../../../context/TaskContext";
+import { PRIORITY_OPTIONS, TASK_ICONS, BASIC_ICONS, useTasks } from "../../../context/TaskContext";
 
 // Data do walidacji w DatePickerze
 const today = new Date();
@@ -242,7 +243,9 @@ export default function AddTaskScreen() {
     const [startTime, setStartTime] = useState(initialTime); 
     const [endTime, setEndTime] = useState(getDefaultEndTime(initialTime)); 
     const [selectedPriority, setSelectedPriority] = useState(PRIORITY_OPTIONS[0].value); 
-    const [selectedIcon, setSelectedIcon] = useState(TASK_ICONS[0].icon); 
+    // Zastąp starą linię selectedIcon tymi dwiema:
+    const [selectedIcon, setSelectedIcon] = useState(BASIC_ICONS[0]); 
+    const [isIconModalVisible, setIconModalVisible] = useState(false);
 
     // --- STANY DANYCH OPCJONALNYCH/KALENDARZA ---
     const [isAllDay, setIsAllDay] = useState(false);
@@ -473,23 +476,7 @@ export default function AddTaskScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.container}
         >
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                >
-                    {/* Uproszczony przycisk Wstecz (strzałka) */}
-                    <Text style={styles.backButtonText}>←</Text> 
-                </TouchableOpacity>
-                {/* Główny tytuł ekranu */}
-                <Text style={styles.title}>Dodaj Zadanie</Text> 
-                <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => router.back()}
-                >
-                    <Text style={styles.cancelText}>Anuluj</Text>
-                </TouchableOpacity>
-            </View>
+            
             <ScrollView style={styles.scrollContent}>
                 <View style={styles.formCard}>
                     {/* --- NAZWA ZADANIA --- */}
@@ -535,27 +522,23 @@ export default function AddTaskScreen() {
                             </TouchableOpacity>
                         ))}
                     </View>
-
-                    {/* --- WYBÓR IKONY --- */}
-                    <Text style={styles.label}>Ikona Zadania</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconContainerScroll}>
-                        <View style={styles.iconContainer}>
-                            {TASK_ICONS.map((item) => (
-                                <TouchableOpacity
-                                    key={item.icon}
-                                    style={[
-                                        styles.iconButton,
-                                        selectedIcon === item.icon && styles.iconSelected,
-                                    ]}
-                                    onPress={() => setSelectedIcon(item.icon)}
-                                >
-                                    <Text style={styles.iconText}>{item.icon}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </ScrollView>
                 </View>
-
+                    {/* --- WYBÓR IKONY --- */}
+                <Text style={styles.label}>Wybierz Ikonę</Text>
+                <View style={styles.basicIconsGrid}>
+                    {BASIC_ICONS.map((icon) => (
+                        <TouchableOpacity 
+                            key={icon} 
+                            style={[styles.iconButton, selectedIcon === icon && styles.iconSelected]} 
+                            onPress={() => setSelectedIcon(icon)}
+                        >
+                            <Text style={styles.iconText}>{icon}</Text>
+                        </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity style={styles.moreIconsButton} onPress={() => setIconModalVisible(true)}>
+                        <Text style={styles.moreIconsText}>+ Więcej</Text>
+                    </TouchableOpacity>
+                </View>
                 {/* -------------------------------------------------------------------------------------- */}
                 
                 <View style={styles.formCard}>
@@ -735,6 +718,39 @@ export default function AddTaskScreen() {
 
                 <View style={{ height: 50 }} />
             </ScrollView>
+            <Modal visible={isIconModalVisible} animationType="slide" transparent={true}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Wszystkie Ikony</Text>
+                            <TouchableOpacity onPress={() => setIconModalVisible(false)}>
+                                <Text style={styles.closeModalText}>Gotowe</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView contentContainerStyle={styles.allIconsContainer}>
+                            {TASK_ICONS.map((category) => (
+                                <View key={category.name} style={styles.categorySection}>
+                                    <Text style={styles.categoryTitle}>{category.name}</Text>
+                                    <View style={styles.iconsGrid}>
+                                        {category.icons.map((icon, idx) => (
+                                            <TouchableOpacity 
+                                                key={`${icon}-${idx}`} 
+                                                style={[styles.modalIconButton, selectedIcon === icon && styles.iconSelected]} 
+                                                onPress={() => { 
+                                                    setSelectedIcon(icon); 
+                                                    setIconModalVisible(false); 
+                                                }}
+                                            >
+                                                <Text style={styles.iconText}>{icon}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 }
@@ -1016,4 +1032,16 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
     },
+    basicIconsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    moreIconsButton: { paddingHorizontal: 12, height: 48, backgroundColor: '#eee', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    moreIconsText: { color: '#007AFF', fontWeight: 'bold' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '70%', padding: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    closeModalText: { color: '#007AFF', fontSize: 16, fontWeight: 'bold' },
+    categorySection: { marginBottom: 20 },
+    categoryTitle: { fontSize: 14, color: '#888', marginBottom: 10, textTransform: 'uppercase' },
+    iconsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    modalIconButton: { width: 55, height: 55, backgroundColor: '#f9f9f9', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 });

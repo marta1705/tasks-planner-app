@@ -1,9 +1,8 @@
-// AuthProvider.js
-import { View, Text } from 'react-native';
+// context/AuthContext.js
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, updateDoc, getFirestore } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore"; // Importujemy setDoc dla bezpieczeństwa
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db, initializeFirebaseClient } from "../services/firebase";
+import { auth, db } from "../services/firebase"; // Upewnij się, że firebase.js eksportuje zainicjalizowane obiekty
 
 const AuthContext = createContext();
 
@@ -15,43 +14,55 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const db = getFirestore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // Sprawdzamy czy auth istnieje, aby uniknąć błędu "Cannot read properties of undefined"
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
-        if (user) {
-          // odświeża dane użytkownika
-          await user.reload();
+        if (firebaseUser) {
+          // Odświeżamy dane użytkownika
+          await firebaseUser.reload();
           const refreshedUser = auth.currentUser;
 
-          // aktualizacja usera
           if (!refreshedUser) {
             setUser(null);
             setLoading(false);
             return;
           }
+          
           setUser(refreshedUser);
 
+          // Synchronizacja z Firestore
           if (refreshedUser?.uid) {
             const userRef = doc(db, "users", refreshedUser.uid);
-            await updateDoc(userRef, { email: refreshedUser.email }).catch(() => { });
+            
+            // setDoc + merge: true tworzy dokument jeśli go brakuje
+            // Naprawia to błąd "No document to update" z logów
+            await setDoc(userRef, { 
+              email: refreshedUser.email,
+              lastLogin: new Date().toISOString()
+            }, { merge: true }).catch((err) => {
+              console.log("Firestore sync error:", err.message);
+            });
           }
-
         } else {
           setUser(null);
         }
-
-        setLoading(false);
       } catch (err) {
-        console.log("Auth error:", err);
+        console.log("Auth internal error:", err);
+      } finally {
+        // Zawsze wyłączamy ekran ładowania
         setLoading(false);
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
-
 
   const value = {
     user,

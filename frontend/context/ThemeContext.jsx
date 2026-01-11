@@ -7,31 +7,28 @@ import { auth, db } from "../services/firebase";
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-
     const [theme, setTheme] = useState("light");
     const [user, setUser] = useState(null);
 
-    // pilnuje, czy ktoś jest zalogowany
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser); // Aktualizujemy stan, co wymusi uruchomienie Efektu nr 2
+        // Zabezpieczenie przed błędem undefined (reading 'onAuthStateChanged')
+        if (!auth) return;
 
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
             if (!currentUser) {
-                setTheme("light"); // Reset po wylogowaniu
+                setTheme("light");
             }
         });
 
         return () => unsubscribeAuth();
     }, []);
 
-    // Reaguje na zmianę 'user'
     useEffect(() => {
-        // Jeśli nie ma usera, nie uruchomi nasłuchu
-        if (!user) return;
+        if (!user || !db) return;
 
         const userDocRef = doc(db, "users", user.uid);
 
-        // Uruchamiamy nasłuch
         const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -40,45 +37,34 @@ export function ThemeProvider({ children }) {
                 }
             }
         }, (error) => {
-            // ignoruje błąd uprawnień przy wylogowywaniu
             if (error.code === 'permission-denied') return;
             console.error("Theme snapshot error:", error);
         });
 
-        // Ta funkcja wykona się AUTOMATYCZNIE w momencie, gdy 'user' zmieni się na null (wylogowanie).
-        // React sam posprząta nasłuch, zanim Firebase zdąży rzucić błędem.
         return () => unsubscribeSnapshot();
-
     }, [user]);
 
-    // Funkcja przełączania motywu z zapisem do bazy
     const toggleTheme = async () => {
         const newTheme = theme === "light" ? "dark" : "light";
-
         setTheme(newTheme);
 
-        // zapis do Firestore
-        if (user) {
+        if (user && db) {
             try {
                 const userRef = doc(db, "users", user.uid);
-
                 await setDoc(userRef, { theme: newTheme }, { merge: true });
-
             } catch (error) {
-                console.error("Błąd zapisu motywu do Firebase:", error);
+                console.error("Błąd zapisu motywu:", error);
             }
         }
     };
 
-    const activeColors = Colors[theme] || Colors.light;
-
-    const colors = Colors[theme];
+    const colors = Colors[theme] || Colors.light;
 
     const value = {
-        theme,          // "light" lub "dark"
-        colors,         // Obiekt z konkretnymi kolorami
-        toggleTheme,    // Funkcja zmiany
-        isDark: theme === 'dark' // Pomocnicza flaga
+        theme,
+        colors,
+        toggleTheme,
+        isDark: theme === 'dark'
     };
 
     return (

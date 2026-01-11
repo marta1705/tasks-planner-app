@@ -1,17 +1,14 @@
+// frontend/context/PetContext.jsx
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
 
-
 const PetContext = createContext();
 
-// Ustalanie stałych wartości dla grywalizacji
+// STAŁE DLA GRYWALIZACJI
 const TREAT_COST_IN_HEALTH = 2;
-
-// STAŁE DLA DZIENNEJ NAGRODY (INDEKS 0-6 ODPOWIADA DNIOM 1-7)
-const DAILY_REWARD_TIERS = [1, 1, 1, 1, 2, 2, 3];
-const DAILY_REWARD_RESET_DAY = 7;
 
 // FUNKCJE POMOCNICZE
 const toDateString = (date) => {
@@ -21,13 +18,6 @@ const toDateString = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-const getRewardAmount = (streakIndex) => {
-  // Zapewnia, że indeks jest w zakresie 0-6
-  const index = streakIndex % DAILY_REWARD_RESET_DAY;
-  return DAILY_REWARD_TIERS[index];
-}
-
-// pet options
 const PET_OPTIONS = [
   {
     id: 1,
@@ -89,33 +79,23 @@ const PET_OPTIONS = [
 export function PetProvider({ children }) {
   const [petHealth, setPetHealth] = useState(100);
   const [petName, setPetName] = useState("Twój pupil");
-  const [petImage, setPetImage] = useState(require("../assets/images/dog.png"));
-  const [lastUpdate, setLastUpdate] = useState(new Date().toISOString());
-  //const [user, setUser] = useState(null);
-  const [selectedPetId, setSelectedPetId] = useState(1);
-
-  const currentPet = PET_OPTIONS.find(p => p.id === selectedPetId) || PET_OPTIONS[0];
-
+  const [petImage, setPetImage] = useState(require("../assets/images/dog/starting_position/dog_starting_position.png"));
   const [treatsBalance, setTreatsBalance] = useState(0);
-  // ✅ KLUCZOWY STAN
+  const [selectedPetId, setSelectedPetId] = useState(1);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-
-  // NOWE STANY DLA DZIENNEJ NAGRODY
-  const [dailyRewardStreak, setDailyRewardStreak] = useState(0); // 0 do 6
-  const [lastRewardClaimDate, setLastRewardClaimDate] = useState(null); // YYYY-MM-DD
+  const [dailyRewardStreak, setDailyRewardStreak] = useState(0);
+  const [lastRewardClaimDate, setLastRewardClaimDate] = useState(null);
 
   const { user, loading: authLoading } = useAuth();
   const userId = user?.uid;
 
-  // --- FUNKCJA POMOCNICZA DO REFERENCJI ZAPISU ---
+  const currentPet = PET_OPTIONS.find(p => p.id === selectedPetId) || PET_OPTIONS[0];
+
   const getPetDocRef = () => {
     if (!userId || !db) return null;
-    // Zapisujemy w kolekcji 'pets' pod UID użytkownika (zmieniono na 'pets' dla lepszej struktury)
     return doc(db, "pets", userId);
   };
 
-
-  // === 1. ŁADOWANIE SALDA I STANU Z FB ===
   useEffect(() => {
     if (authLoading || !userId || !db) {
       if (!authLoading) setIsDataLoaded(true);
@@ -123,180 +103,125 @@ export function PetProvider({ children }) {
     }
 
     const petDocRef = getPetDocRef();
-    if (!petDocRef) return;
-
-    // Słuchanie zmian w dokumencie użytkownika
     const unsubscribe = onSnapshot(petDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-
-        // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
-        setPetName(data.petName || petName);
-        setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
+        setPetName(data.petName || "Twój pupil");
+        setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
         setTreatsBalance(data.treatsBalance !== undefined ? data.treatsBalance : 0);
-        setPetImage(data.petImage || petImage);
-        setLastUpdate(data.lastUpdate || lastUpdate);
-        // Ładowanie nowych stanów dla dziennej nagrody
+        setPetImage(data.petImage || require("../assets/images/dog/starting_position/dog_starting_position.png"));
         setDailyRewardStreak(data.dailyRewardStreak ?? 0);
         setLastRewardClaimDate(data.lastRewardClaimDate ?? null);
-
-        console.log("[PET CONTEXT] Dane pupila załadowane z FB.");
+        setSelectedPetId(data.selectedPetId || 1);
       } else {
-        // Jeśli dokument użytkownika nie istnieje, inicjujemy go domyślnymi wartościami
-        console.log("[PET CONTEXT] Dokument użytkownika nie istnieje. Inicjuję...");
         setDoc(petDocRef, {
-          petName,
-          petHealth,
-          petImage,
+          petName: "Twój pupil",
+          petHealth: 100,
           treatsBalance: 0,
+          selectedPetId: 1,
           lastUpdate: new Date().toISOString(),
-          // Początkowe wartości dla dziennej nagrody
           dailyRewardStreak: 0,
           lastRewardClaimDate: null,
         }, { merge: true });
       }
-      setIsDataLoaded(true); // Ustawiamy na true po udanym załadowaniu lub inicjalizacji
-    }, (error) => {
-      console.error("Błąd ładowania danych pupila z Firestore:", error);
-      setIsDataLoaded(true); // Ustawiamy na true nawet w przypadku błędu, aby odblokować UI
+      setIsDataLoaded(true);
     });
 
     return () => unsubscribe();
   }, [userId, authLoading]);
 
-
-  // === 2. FUNKCJA ZAPISUJĄCA STAN DO FB (KLUCZOWA FUNKCJA) ===
-  const savePetStateToFirestore = (updates) => {
-    // ✅ Zapisujemy tylko jeśli dane są już załadowane lub jest to inicjalizacja!
+  const savePetStateToFirestore = async (updates) => {
     if (!userId || !db) return;
     const petDocRef = getPetDocRef();
-    if (!petDocRef) return;
-
     try {
-      updateDoc(petDocRef, {
+      await updateDoc(petDocRef, {
         ...updates,
         lastUpdate: new Date().toISOString()
       });
-      setLastUpdate(new Date().toISOString()); // Aktualizujemy lokalnie
     } catch (error) {
-      console.error("Błąd zapisu stanu pupila do Firestore:", error);
+      console.error("Błąd zapisu do Firestore:", error);
     }
   };
 
-
-  // === 3. LOGIKA PUNKTACJI ===
-
-  // ZMIENIONA FUNKCJA: Dodaje Smaczki (Nagroda za wykonanie zadania/nawyku)
   const addTreats = (amount) => {
-    setTreatsBalance(prev => {
-      const newBalance = prev + amount;
-      savePetStateToFirestore({ treatsBalance: newBalance }); // ZAPIS SMACZKÓW
-      return newBalance;
-    });
+    const newBalance = treatsBalance + amount;
+    setTreatsBalance(newBalance);
+    savePetStateToFirestore({ treatsBalance: newBalance });
   };
 
-  // ZMIENIONA FUNKCJA: Usuwa Smaczki (Kara za nieodebranie daily reward)
-  const removeTreats = (amount) => {
-    setTreatsBalance(prev => {
-      const newBalance = prev - amount; // Smaczki mogą iść na minus, jeśli kara jest większa niż saldo
-      savePetStateToFirestore({ treatsBalance: newBalance }); // ZAPIS SMACZKÓW
-      return newBalance;
-    });
+  const removeHealthPoints = (points) => {
+    const newHealth = Math.max(0, petHealth - points);
+    setPetHealth(newHealth);
+    savePetStateToFirestore({ petHealth: newHealth });
   };
 
-  // ZMIENIONA FUNKCJA: Usuwa PUNKTY ZDROWIA (kara za zaległe nawyki/zadania)
-  const removeHealthPoints = (points = 10) => {
-    setPetHealth((prev) => {
-      const newHealth = Math.max(0, prev - points);
-      savePetStateToFirestore({ petHealth: newHealth }); // ZAPIS ZDROWIA
-      return newHealth;
-    });
-  };
-
-  // ZMIENIONA FUNKCJA: Karmienie (używa Smaczków do odnowienia Zdrowia)
   const feedPet = () => {
     if (treatsBalance >= 1 && petHealth < 100) {
-      // Optymistyczna aktualizacja lokalna
-      setTreatsBalance(prev => {
-        const newBalance = Math.max(0, prev - 1);
-        // WAŻNE: W tym przypadku zapis musi być wykonany W OBU SETTERACH
-        savePetStateToFirestore({ treatsBalance: newBalance }); // ZAPIS SMACZKÓW
-        return newBalance;
-      });
-
-      setPetHealth(prev => {
-        const newHealth = Math.min(100, prev + TREAT_COST_IN_HEALTH);
-        savePetStateToFirestore({ petHealth: newHealth }); // ZAPIS ZDROWIA
-        return newHealth;
-      });
+      const newBalance = Math.max(0, treatsBalance - 1);
+      const newHealth = Math.min(100, petHealth + TREAT_COST_IN_HEALTH);
+      setTreatsBalance(newBalance);
+      setPetHealth(newHealth);
+      savePetStateToFirestore({ treatsBalance: newBalance, petHealth: newHealth });
       return true;
     }
     return false;
   };
 
-  // =================================================================
-  // NOWA FUNKCJA: ODBIERANIE DZIENNEJ NAGRODY
-  // =================================================================
+  // LOGIKA NAWYKÓW I KAR ZA NIEOBECNOŚĆ
   const claimDailyReward = () => {
     const today = new Date();
     const todayStr = toDateString(today);
 
-    // 0. Sprawdzenie, czy nagroda została już odebrana dzisiaj
-    if (lastRewardClaimDate === todayStr) {
-      return { success: false };
-    }
+    if (lastRewardClaimDate === todayStr) return { success: false, message: "Już odebrano." };
 
-    // Oblicz datę wczorajszą
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
     const yesterdayStr = toDateString(yesterday);
 
     let currentStreak = dailyRewardStreak;
-    let rewardAmount = 0;
-    let newStreak = 0;
-    let appliedPenalty = 0;
+    let healthPenalty = 0;
 
-    // 1. SPRAWDŹ PRZERWANIE SERII (I NAŁÓŻ KARĘ)
+    // Kara za przegapione nawyki
     if (lastRewardClaimDate && lastRewardClaimDate !== yesterdayStr) {
-      // Seria została przerwana (użytkownik nie odebrał nagrody wczoraj)
-      // Kara jest równa nagrodzie, którą by otrzymał, gdyby odebrał wczoraj
-      const penaltyAmount = getRewardAmount(currentStreak);
-      removeTreats(penaltyAmount);
-      appliedPenalty = -penaltyAmount;
-      console.log(`[DAILY REWARD] Seria przerwana. Kara: -${penaltyAmount} smaczków.`);
+      const lastDate = new Date(lastRewardClaimDate);
+      const diffTime = Math.abs(today - lastDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      // Resetujemy serię, ponieważ została przerwana
-      currentStreak = 0; // Seria zaczyna się od Dnia 1 (indeks 0)
+      if (diffDays >= 3) healthPenalty = 15;
+      else if (diffDays === 2) healthPenalty = 10;
+      else if (diffDays === 1) healthPenalty = 5;
+      
+      currentStreak = 0; // Resetujemy passę
     }
 
-    // 2. OBLICZ NAGRODĘ ZA DZISIAJ
-    rewardAmount = getRewardAmount(currentStreak);
+    const newStreak = currentStreak + 1;
+    let rewardAmount = 1; // Podstawa
 
-    // Dodaj smaczki
-    addTreats(rewardAmount);
+    // Bonusy za wykonanie nawyków na czas
+    if (newStreak >= 21) rewardAmount = 15;
+    else if (newStreak >= 10) rewardAmount = 10;
+    else if (newStreak >= 5) rewardAmount = 5;
 
-    // 3. AKTUALIZUJ NOWĄ SERIĘ
-    // Nowa seria to (obecny cykl + 1) % 7
-    newStreak = (currentStreak + 1) % DAILY_REWARD_RESET_DAY;
+    const newHealth = Math.max(0, petHealth - healthPenalty);
+    const newBalance = treatsBalance + rewardAmount;
 
-
-    // 4. ZAPISZ NOWY STAN (zapisuje streak i datę)
+    setPetHealth(newHealth);
+    setTreatsBalance(newBalance);
     setDailyRewardStreak(newStreak);
     setLastRewardClaimDate(todayStr);
 
     savePetStateToFirestore({
+      petHealth: newHealth,
+      treatsBalance: newBalance,
       dailyRewardStreak: newStreak,
       lastRewardClaimDate: todayStr,
     });
 
-    console.log(`[DAILY REWARD] Nagroda dzienna odebrana. Nagroda: +${rewardAmount} smaczków. Nowa seria (indeks): ${newStreak}`);
-
     return {
       success: true,
       rewardAmount,
-      message: `Gratulacje! Odebrałeś ${rewardAmount} smaczków za dzisiejszą aktywność. Twoja nowa seria to Dzień ${newStreak + 1}.`,
-      penalty: appliedPenalty,
-      currentDay: currentStreak + 1, // Dzień, który właśnie odebrano (1-7)
+      penalty: healthPenalty,
+      message: `Dzień ${newStreak}! +${rewardAmount} karmy. Kara: -${healthPenalty} XP.`,
     };
   };
 
@@ -305,46 +230,31 @@ export function PetProvider({ children }) {
     savePetStateToFirestore({ petName: name });
   };
 
-  const updatePetImage = (image) => {
-    setPetImage(image);
-    savePetStateToFirestore({ petImage: image });
-  };
-
-  // 4. ZMIANA: Funkcja aktualizująca ID
-  const updatePetId = (id) => {
+  const updatePetId = async (id) => {
     setSelectedPetId(id);
-    // saveToFirebase({ selectedPetId: id }); // Opcjonalnie: zapis w bazie
+    await savePetStateToFirestore({ selectedPetId: id });
   };
-
 
   const getPetStatus = () => {
-    if (petHealth >= 80)
-      return { status: "super", emoji: "😊", color: "#4CAF50" };
-    if (petHealth >= 60)
-      return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
-    if (petHealth >= 40)
-      return { status: "okej", emoji: "😐", color: "#FFC107" };
-    if (petHealth >= 20)
-      return { status: "słabo", emoji: "😟", color: "#FF9800" };
+    if (petHealth >= 80) return { status: "super", emoji: "😊", color: "#4CAF50" };
+    if (petHealth >= 60) return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
+    if (petHealth >= 40) return { status: "okej", emoji: "😐", color: "#FFC107" };
+    if (petHealth >= 20) return { status: "słabo", emoji: "😟", color: "#FF9800" };
     return { status: "źle", emoji: "😢", color: "#F44336" };
   };
-
 
   return (
     <PetContext.Provider
       value={{
         petHealth,
         petName,
-        lastUpdate,
         addTreats,
-        removeTreats,
         removeHealthPoints,
         feedPet,
         treatsBalance,
         updatePetName,
         getPetStatus,
         petImage,
-        updatePetImage,
         petOptions: PET_OPTIONS,
         updatePetId,
         currentPet,
@@ -352,7 +262,6 @@ export function PetProvider({ children }) {
         dailyRewardStreak,
         lastRewardClaimDate,
         claimDailyReward,
-        // ✅ UDOSTĘPNIENIE FLAGI ŁADOWANIA
         isDataLoaded,
       }}
     >

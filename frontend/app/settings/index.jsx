@@ -1,12 +1,13 @@
+// frontend/app/(tabs)/settings/index.jsx
+
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signOut, updatePassword, updateProfile, verifyBeforeUpdateEmail } from "firebase/auth";
 import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { usePet } from "../../context/PetContext"; // Import Contextu
+import { usePet } from "../../context/PetContext"; 
 import { useTheme } from "../../context/ThemeContext";
-
 
 export default function SettingsScreen() {
   const auth = getAuth();
@@ -42,9 +43,18 @@ export default function SettingsScreen() {
 
   const [petModalVisible, setPetModalVisible] = useState(false);
 
-  const handleSelectPet = (petOption) => {
-    updatePetId(petOption.id);
-    setPetModalVisible(false);
+  // ZMIANA: Funkcja jest teraz asynchroniczna i obsługuje loading
+  const handleSelectPet = async (petOption) => {
+    setLoading(true);
+    try {
+      await updatePetId(petOption.id); // Wywołanie funkcji z Contextu (która zapisuje do Firebase)
+      setPetModalVisible(false);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Błąd", "Nie udało się zmienić pupila.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Zapis imienia do Firebase
@@ -82,7 +92,6 @@ export default function SettingsScreen() {
       );
       await reauthenticateWithCredential(user, credential);
 
-      //await updateEmail(user, newEmail);
       await verifyBeforeUpdateEmail(user, newEmail);
 
       await updateDoc(doc(db, "users", user.uid), {
@@ -109,7 +118,6 @@ export default function SettingsScreen() {
     try {
       setLoading(true);
 
-      // walidacja jak przy rejestracji
       if (newPassword.length < 6) {
         Alert.alert("Błąd", "Hasło musi mieć co najmniej 6 znaków");
         setLoading(false);
@@ -122,7 +130,6 @@ export default function SettingsScreen() {
         return;
       }
 
-      // Reautentykacja
       const credential = EmailAuthProvider.credential(
         auth.currentUser.email,
         currentPassword
@@ -130,17 +137,14 @@ export default function SettingsScreen() {
 
       await reauthenticateWithCredential(auth.currentUser, credential);
 
-      // Zmiana hasła
       await updatePassword(auth.currentUser, newPassword);
 
       Alert.alert("Sukces", "Hasło zostało zmienione.");
 
-      // wyczyszczenie pol
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
 
-      // zamkniecie modalu
       setPasswordModalVisible(false);
 
     } catch (error) {
@@ -160,7 +164,7 @@ export default function SettingsScreen() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.replace("/login"); // przeniesienie na ekran logowania
+      router.replace("/login");
     } catch (error) {
       console.error(error);
       Alert.alert("Błąd", "Nie udało się wylogować.");
@@ -187,12 +191,10 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.themeContainer, { backgroundColor: colors.card }]}>
-
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 18, color: colors.text }}>
             {theme === "dark" ? "Motyw: Ciemny" : "Motyw: Jasny"}
           </Text>
-
           <Switch
             value={theme === "dark"}
             onValueChange={toggleTheme}
@@ -200,25 +202,21 @@ export default function SettingsScreen() {
             thumbColor={theme === "dark" ? "#f5dd4b" : "#f4f3f4"}
           />
         </View>
-
       </View>
-      {/* -------- PROFIL -------- */}
+
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
           <Ionicons name="person-circle-outline" size={70} color="#007AFF" />
         </View>
-
         <View>
           <Text style={styles.profileName}>{name}</Text>
           <Text style={styles.profileEmail}>{email}</Text>
         </View>
       </View>
 
-      {/* === Wybór zwierzaczka === */}
       <View style={styles.section}>
         <Ionicons name="paw-outline" size={22} color={colors.tint || "#007AFF"} />
         <Text style={[styles.sectionLabel, { color: colors.text }]}>Wygląd pupila</Text>
-
         <TouchableOpacity
           style={styles.saveButton}
           onPress={() => setPetModalVisible(true)}
@@ -227,7 +225,6 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ------------------- ZMIANA IMIENIA ------------------- */}
       <View style={styles.section}>
         <Ionicons name="person-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Zmiana imienia</Text>
@@ -242,7 +239,6 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ====== ZMIANA HASŁA ====== */}
       <View style={styles.section}>
         <Ionicons name="lock-closed-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Hasło</Text>
@@ -253,11 +249,10 @@ export default function SettingsScreen() {
           <Text style={styles.changePasswordText}>Zmień hasło</Text>
         </TouchableOpacity>
       </View>
-      {/* ------------------- ZMIANA EMAILA ------------------- */}
+
       <View style={styles.section}>
         <Ionicons name="mail-outline" size={22} color="#007AFF" />
         <Text style={styles.sectionLabel}>Email</Text>
-
         <TouchableOpacity
           style={styles.saveButton}
           onPress={() => setEmailModalVisible(true)}
@@ -266,25 +261,21 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ------------------- WYLOGOWANIE ------------------- */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={22} color="#fff" />
         <Text style={styles.logoutButtonText}>Wyloguj się</Text>
       </TouchableOpacity>
 
-      {/* ====== USUNIĘCIE KONTA ====== */}
       <TouchableOpacity style={styles.deleteButton}>
         <Ionicons name="warning-outline" size={22} color="#fff" />
         <Text style={styles.deleteButtonText}>Usuń konto</Text>
       </TouchableOpacity>
 
-
-      {/* ========== MODAL DO ZMIANY EMAILA ========= */}
+      {/* Modal Email */}
       <Modal visible={emailModalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Zmiana adresu email</Text>
-
             <TextInput
               style={styles.input}
               placeholder="Nowy email"
@@ -292,7 +283,6 @@ export default function SettingsScreen() {
               onChangeText={setNewEmail}
               autoCapitalize="none"
             />
-
             <TextInput
               style={styles.input}
               placeholder="Aktualne hasło"
@@ -300,11 +290,9 @@ export default function SettingsScreen() {
               value={passwordForEmail}
               onChangeText={setPasswordForEmail}
             />
-
             <TouchableOpacity style={styles.saveButton} onPress={handleChangeEmail}>
               <Text style={styles.saveButtonText}>Zapisz zmiany</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setEmailModalVisible(false)}
@@ -315,7 +303,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* ========== Modal zmiany hasła ========= */}
+      {/* Modal Hasło */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -325,8 +313,6 @@ export default function SettingsScreen() {
         <View style={styles.passwordModalOverlay}>
           <View style={styles.passwordModalBox}>
             <Text style={styles.passwordModalTitle}>Zmień hasło</Text>
-
-            {/* Aktualne hasło */}
             <View style={styles.passwordField}>
               <TextInput
                 style={styles.passwordInput}
@@ -346,8 +332,6 @@ export default function SettingsScreen() {
                 />
               </TouchableOpacity>
             </View>
-
-            {/* Nowe hasło */}
             <View style={styles.passwordField}>
               <TextInput
                 style={styles.passwordInput}
@@ -367,8 +351,6 @@ export default function SettingsScreen() {
                 />
               </TouchableOpacity>
             </View>
-
-            {/* Powtórz nowe hasło */}
             <View style={styles.passwordField}>
               <TextInput
                 style={styles.passwordInput}
@@ -388,8 +370,6 @@ export default function SettingsScreen() {
                 />
               </TouchableOpacity>
             </View>
-
-            {/* Przyciski */}
             <View style={styles.passwordModalButtons}>
               <TouchableOpacity
                 style={[styles.passwordModalButton, { backgroundColor: "#ccc" }]}
@@ -397,7 +377,6 @@ export default function SettingsScreen() {
               >
                 <Text>Anuluj</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.passwordModalButton, { backgroundColor: "#007AFF" }]}
                 onPress={handleChangePassword}
@@ -408,24 +387,21 @@ export default function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
           </View>
         </View>
       </Modal>
 
-      {/* === Modal zwierzaczka === */}
+      {/* Modal Pupil */}
       <Modal visible={petModalVisible} transparent animationType="fade" onRequestClose={() => setPetModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Wybierz pupila</Text>
-
             <View style={styles.petGrid}>
               {petOptions.map((pet) => (
                 <TouchableOpacity
                   key={pet.id}
                   style={[
                     styles.petOption,
-                    // 3. ZMIANA: Podświetlenie na podstawie ID
                     pet.id === selectedPetId && { borderWidth: 2, borderColor: colors.tint || "#007AFF" }
                   ]}
                   onPress={() => handleSelectPet(pet)}
@@ -435,231 +411,51 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <TouchableOpacity style={styles.closeModalButton} onPress={() => setPetModalVisible(false)}>
               <Text style={styles.closeModalText}>Anuluj</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 30,
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    left: 35,
-    padding: 0,
-  },
-  header: {
-    fontSize: 32,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  themeContainer: {
-    flex: 1,
-    padding: 20,
-    marginBottom: 25,
-  },
-  section: {
-    marginBottom: 25,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 14,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  sectionLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 30,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  avatar: {
-    marginRight: 15,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 2,
-  },
-  input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    marginBottom: 10,
-    elevation: 2,
-  },
-  changePasswordText: {
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    color: "#007AFF",
-  },
-  changePasswordButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  saveButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  logoutButton: {
-    marginTop: 50,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ff4444",
-    paddingVertical: 14,
-    borderRadius: 10,
-    elevation: 3,
-  },
-  logoutButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContent: {
-    width: "85%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 15,
-  },
-  passwordModalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  passwordModalBox: {
-    width: "85%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    elevation: 5,
-  },
-  passwordModalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  passwordInput: {
-    width: "100%",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    paddingRight: 40,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-  },
-  passwordModalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  passwordModalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  passwordField: {
-    marginBottom: 15,
-    position: "relative",
-  },
-  passwordModalButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  eyeIcon: {
-    position: "absolute",
-    right: 10,
-    top: "50%",
-    transform: [{ translateY: -11 }],
-  },
-  cancelButton: {
-    marginTop: 10,
-    padding: 12,
-    backgroundColor: "#999",
-    borderRadius: 8,
-  },
-  cancelButtonText: {
-    textAlign: "center",
-    color: "#fff",
-    fontSize: 16,
-  },
-  deleteButton: {
-    marginTop: 50,
-    paddingVertical: 14,
-    backgroundColor: "#ff4444",
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  deleteButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    textAlign: "center",
-    fontWeight: "bold",
-  },
+  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 30, position: "relative" },
+  backButton: { position: "absolute", left: 35, padding: 0 },
+  header: { fontSize: 32, fontWeight: "bold", textAlign: "center" },
+  themeContainer: { padding: 20, marginBottom: 25, borderRadius: 14 },
+  section: { marginBottom: 25, backgroundColor: "#fff", padding: 20, borderRadius: 14, elevation: 3, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  sectionLabel: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
+  profileCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 20, borderRadius: 16, marginBottom: 30, elevation: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 3 } },
+  avatar: { marginRight: 15 },
+  profileName: { fontSize: 20, fontWeight: "700" },
+  profileEmail: { fontSize: 14, color: "#555", marginTop: 2 },
+  input: { backgroundColor: "#fff", padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 10, elevation: 2 },
+  changePasswordText: { fontSize: 16, fontWeight: "600", textAlign: "center", color: "#fff" },
+  changePasswordButton: { backgroundColor: "#007AFF", paddingVertical: 14, borderRadius: 8, alignItems: "center", marginBottom: 15 },
+  saveButton: { backgroundColor: "#007AFF", paddingVertical: 12, borderRadius: 8, alignItems: "center" },
+  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  logoutButton: { marginTop: 30, flexDirection: "row", justifyContent: "center", alignItems: "center", backgroundColor: "#ff4444", paddingVertical: 14, borderRadius: 10 },
+  logoutButtonText: { color: "#fff", fontSize: 18, marginLeft: 8, fontWeight: "600" },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
+  modalContent: { width: "85%", backgroundColor: "#fff", borderRadius: 12, padding: 20 },
+  modalTitle: { fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 15 },
+  passwordModalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  passwordModalBox: { width: "85%", backgroundColor: "#fff", borderRadius: 12, padding: 20 },
+  passwordModalTitle: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  passwordInput: { width: "100%", paddingVertical: 12, paddingHorizontal: 12, paddingRight: 40, fontSize: 16, borderWidth: 1, borderColor: "#ccc", borderRadius: 8 },
+  passwordModalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  passwordModalButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
+  passwordField: { marginBottom: 15, position: "relative" },
+  passwordModalButtonText: { color: "#fff", fontWeight: "bold" },
+  eyeIcon: { position: "absolute", right: 10, top: "50%", transform: [{ translateY: -11 }] },
+  cancelButton: { marginTop: 10, padding: 12, backgroundColor: "#999", borderRadius: 8 },
+  cancelButtonText: { textAlign: "center", color: "#fff", fontSize: 16 },
+  deleteButton: { marginTop: 20, paddingVertical: 14, backgroundColor: "#ff4444", borderRadius: 10, flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  deleteButtonText: { color: "#fff", fontSize: 18, textAlign: "center", fontWeight: "bold" },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '90%', padding: 20, borderRadius: 20, alignItems: 'center' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   petGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15 },
   petOption: { alignItems: 'center', margin: 5, padding: 10, borderRadius: 10 },
   petOptionImage: { width: 60, height: 60, marginBottom: 5 },
