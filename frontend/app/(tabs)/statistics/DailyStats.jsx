@@ -1,104 +1,68 @@
-import { StyleSheet, View, Text } from "react-native";
+import { StyleSheet, View, Text, ScrollView } from "react-native";
 import { useHabits } from "../../../context/HabitContext";
 import { useTasks } from "../../../context/TaskContext";
-import { ScrollView } from "react-native-gesture-handler";
 
 export default function DailyStats() {
-  const { getTodaysHabits, isHabitCompletedOnDate, getHabitsForDate } =
-    useHabits();
-
+  const { isHabitCompletedOnDate, getHabitsForDate } = useHabits();
   const { tasks } = useTasks();
 
-  const today = new Date().toISOString().split("T")[0];
-  const todaysHabits = getTodaysHabits([]);
+  const todayDate = new Date();
+  const todayStr = todayDate.toISOString().split("T")[0];
 
-  const completed = todaysHabits.filter((habit) =>
-    isHabitCompletedOnDate(habit.id, today)
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().split("T")[0];
+
+  // --- LOGIKA NAWYKÓW ---
+  // Pobieramy nawyki na dziś (zastępuje błędne getTodaysHabits)
+  const todaysHabitsList = getHabitsForDate([], todayDate);
+  const completedHabits = todaysHabitsList.filter((habit) =>
+    isHabitCompletedOnDate(habit.id, todayStr)
   ).length;
-  const total = todaysHabits.length;
+  const totalHabits = todaysHabitsList.length;
+  const todayPercentage = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
 
-  const todayHabits = {
-    completed,
-    total,
-    percentage: Math.round((completed / total) * 100) || 0,
-    percentageYesterday: (() => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
-      const yesterdayHabits = getHabitsForDate([], yesterday);
-      const completedYesterday = yesterdayHabits.filter((habit) =>
-        isHabitCompletedOnDate(habit.id, yesterdayStr)
-      ).length;
-      const totalYesterday = yesterdayHabits.length;
-      return Math.round((completedYesterday / totalYesterday) * 100) || 0;
-    })(),
-  };
+  // Pobieramy nawyki na wczoraj do porównania
+  const yesterdayHabitsList = getHabitsForDate([], yesterdayDate);
+  const completedYesterday = yesterdayHabitsList.filter((habit) =>
+    isHabitCompletedOnDate(habit.id, yesterdayStr)
+  ).length;
+  const totalYesterday = yesterdayHabitsList.length;
+  const yesterdayPercentage = totalYesterday > 0 ? Math.round((completedYesterday / totalYesterday) * 100) : 0;
 
+  // --- LOGIKA ZADAŃ ---
   const completedTasksToday = tasks.filter(
-    (task) => task.isCompleted && task.completedAt?.split("T")[0] === today
+    (task) => task.isCompleted && task.completedAt?.split("T")[0] === todayStr
   ).length;
 
-  const totalTasksToday = tasks.filter(
-    (task) => task.deadline === today
+  const completedTasksYesterday = tasks.filter(
+    (task) => task.isCompleted && task.completedAt?.split("T")[0] === yesterdayStr
   ).length;
-
-  const todayTasks = {
-    completed: completedTasksToday,
-    total: totalTasksToday,
-    percentage: Math.round((completedTasksToday / totalTasksToday) * 100) || 0,
-    percentageYesterday: (() => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
-      const completedYesterday = tasks.filter(
-        (task) =>
-          task.isCompleted && task.completedAt?.split("T")[0] === yesterdayStr
-      ).length;
-      return completedYesterday;
-    })(),
-  };
 
   const renderComparison = (type, comparisonValue) => {
     let comparisonColor = "#8E8E93";
     let comparisonIcon = "→";
     let comparisonText = "Tyle samo co wczoraj";
 
-    if (type === "habits") {
-      if (comparisonValue > 0) {
-        comparisonText = `${Math.abs(comparisonValue)}% niż wczoraj`;
-        comparisonColor = "#34C759";
-        comparisonIcon = "↑";
-      } else if (comparisonValue < 0) {
-        comparisonText = `${Math.abs(comparisonValue)}% niż wczoraj`;
-        comparisonColor = "#FF3B30";
-        comparisonIcon = "↓";
-      }
-    } else if (type === "tasks") {
-      if (comparisonValue > 0) {
-        comparisonText = `${Math.abs(comparisonValue)} więcej niż wczoraj`;
-        comparisonColor = "#34C759";
-        comparisonIcon = "↑";
-      } else if (comparisonValue < 0) {
-        comparisonText = `${Math.abs(comparisonValue)} mniej niż wczoraj`;
-        comparisonColor = "#FF3B30";
-        comparisonIcon = "↓";
-      }
+    if (comparisonValue > 0) {
+      comparisonColor = "#34C759";
+      comparisonIcon = "↑";
+      comparisonText = type === "habits" 
+        ? `${Math.abs(comparisonValue)}% więcej niż wczoraj`
+        : `${Math.abs(comparisonValue)} więcej niż wczoraj`;
+    } else if (comparisonValue < 0) {
+      comparisonColor = "#FF3B30";
+      comparisonIcon = "↓";
+      comparisonText = type === "habits"
+        ? `${Math.abs(comparisonValue)}% mniej niż wczoraj`
+        : `${Math.abs(comparisonValue)} mniej niż wczoraj`;
     }
 
     return (
       <View style={styles.comparisonContainer}>
-        <View
-          style={[
-            styles.comparisonBadge,
-            { backgroundColor: comparisonColor + "15" },
-          ]}
-        >
-          <Text style={[styles.comparisonIcon, { color: comparisonColor }]}>
-            {comparisonIcon}
-          </Text>
-          <Text style={[styles.comparisonText, { color: comparisonColor }]}>
-            {comparisonText}
-          </Text>
+        <View style={[styles.comparisonBadge, { backgroundColor: comparisonColor + "15" }]}>
+          <Text style={[styles.comparisonIcon, { color: comparisonColor }]}>{comparisonIcon}</Text>
+          <Text style={[styles.comparisonText, { color: comparisonColor }]}>{comparisonText}</Text>
         </View>
       </View>
     );
@@ -114,9 +78,9 @@ export default function DailyStats() {
 
         <View style={styles.statCardMain}>
           <View style={styles.statCardNumbers}>
-            <Text style={styles.statCardCurrent}>{todayHabits.completed}</Text>
+            <Text style={styles.statCardCurrent}>{completedHabits}</Text>
             <Text style={styles.statCardSlash}>/</Text>
-            <Text style={styles.statCardTotal}>{todayHabits.total}</Text>
+            <Text style={styles.statCardTotal}>{totalHabits}</Text>
           </View>
 
           <View style={styles.progressBarContainer}>
@@ -124,36 +88,30 @@ export default function DailyStats() {
               <View
                 style={[
                   styles.progressBarFill,
-                  { width: `${todayHabits.percentage}%` },
+                  { width: `${todayPercentage}%` },
                 ]}
               />
             </View>
-            <Text style={styles.percentageText}>{todayHabits.percentage}%</Text>
+            <Text style={styles.percentageText}>{todayPercentage}%</Text>
           </View>
         </View>
 
-        {renderComparison(
-          "habits",
-          todayHabits.percentage - todayHabits.percentageYesterday
-        )}
+        {renderComparison("habits", todayPercentage - yesterdayPercentage)}
       </View>
 
       {/* Karta Zadania */}
       <View style={styles.statCard}>
         <View style={styles.statCardHeader}>
-          <Text style={styles.statCardTitle}>Zadania</Text>
+          <Text style={styles.statCardTitle}>Zadania (Ukończone)</Text>
         </View>
 
         <View style={styles.statCardMain}>
           <View style={styles.statCardNumbers}>
-            <Text style={styles.statCardCurrent}>{todayTasks.completed}</Text>
+            <Text style={styles.statCardCurrent}>{completedTasksToday}</Text>
           </View>
         </View>
 
-        {renderComparison(
-          "tasks",
-          todayTasks.completed - todayTasks.percentageYesterday
-        )}
+        {renderComparison("tasks", completedTasksToday - completedTasksYesterday)}
       </View>
     </ScrollView>
   );
