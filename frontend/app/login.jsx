@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = React.useState("");
@@ -27,9 +28,29 @@ export default function LoginScreen() {
   const [resetEmail, setResetEmail] = React.useState("");
   const [resetError, setResetError] = React.useState("");
   const [resetLoading, setResetLoading] = React.useState(false);
+  const [loginLoading, setLoginLoading] = React.useState(false);
+
+  const [isSuccess, setIsSuccess] = React.useState(false);
 
   const auth = getAuth();
   const router = useRouter();
+  //const { isAuthenticated, initialized } = useAuth();
+  const { setRegistering } = useAuth();
+
+  if (isSuccess) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+  // if (initialized && isAuthenticated) {
+  //   return (
+  //     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+  //       <ActivityIndicator size="large" />
+  //     </View>
+  //   );
+  // }
 
   const validateForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,9 +65,11 @@ export default function LoginScreen() {
     return true;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
     if (!validateForm()) return;
+    //setRegistering(true);
+    setLoginLoading(true);
 
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
@@ -55,15 +78,21 @@ export default function LoginScreen() {
         if (!user.emailVerified) {
           setError("Musisz najpierw potwierdzić adres email.");
           auth.signOut();
+          setLoginLoading(false);
           return;
         }
+        setIsSuccess(true);
+        //router.replace("/");
 
-        router.replace("/");
       })
       .catch((error) => {
+        //setRegistering(false);
+        setLoginLoading(false);
+        setIsSuccess(false);
+        console.log(error.code);
         switch (error.code) {
           case "auth/invalid-email":
-            setError("Nieprawidłowy adres email");
+            setError("Błędne dane logowania");
             break;
           case "auth/user-disabled":
             setError("To konto zostało zablokowane");
@@ -72,12 +101,16 @@ export default function LoginScreen() {
             setError("Nie znaleziono użytkownika z tym adresem email");
             break;
           case "auth/wrong-password":
-            setError("Nieprawidłowe hasło");
+            setError("Błędne dane logowania");
+            break;
+          case "auth/too-many-requests":
+            setError("Zbyt wiele prób logowania. Spróbuj później.");
             break;
           default:
             setError("Wystąpił błąd podczas logowania");
         }
-      });
+      })
+    //.finally(() => setLoginLoading(false));
   };
 
   const handlePasswordReset = async () => {

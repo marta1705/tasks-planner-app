@@ -54,6 +54,8 @@ export default function AddHabitScreen() {
     "🍎",
     "🦵",
     "🧠",
+    "💼",
+    "📅",
   ];
 
   const formatDate = (date) => {

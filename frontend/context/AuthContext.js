@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 // context/AuthContext.js
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore"; // Importujemy setDoc dla bezpieczeństwa
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../services/firebase"; // Upewnij się, że firebase.js eksportuje zainicjalizowane obiekty
+=======
+// AuthProvider.js
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getFirestore, updateDoc } from "firebase/firestore";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../services/firebase";
+>>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 
 const AuthContext = createContext();
 
@@ -13,6 +21,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
@@ -53,11 +62,18 @@ export function AuthProvider({ children }) {
         } else {
           setUser(null);
         }
+<<<<<<< HEAD
+=======
+
+        setLoading(false);
+        setInitialized(true);
+>>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
       } catch (err) {
         console.log("Auth internal error:", err);
       } finally {
         // Zawsze wyłączamy ekran ładowania
         setLoading(false);
+        setInitialized(true);
       }
     });
 
@@ -68,6 +84,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated: !!user,
     loading,
+    initialized,
     registering,
     setRegistering,
   };

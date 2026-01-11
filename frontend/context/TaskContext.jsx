@@ -22,6 +22,42 @@ export const PRIORITY_OPTIONS = [
   { value: "low", label: "Niski", color: "#34C759", basePoints: 5 },
 ];
 
+<<<<<<< HEAD
+=======
+export const TASK_ICONS = [
+    { icon: "📝", label: "Notatka" },
+    { icon: "💻", label: "Praca" },
+    { icon: "🛒", label: "Zakupy" },
+    { icon: "🏋️", label: "Sport" },
+    { icon: "📚", label: "Nauka" },
+    { icon: "📊", label: "Raport" },
+    { icon: "📧", label: "E-mail" },
+    { icon: "🧹", label: "Sprzątanie" },
+    { icon: "🧺", label: "Pranie" },
+    { icon: "🍽️", label: "Gotowanie" },
+    { icon: "🛠️", label: "Naprawa" },
+    { icon: "💡", label: "Pomysł" },
+    { icon: "📞", label: "Telefon" },
+];
+
+// ✅ NOWE STAŁE PUNKTACJI (OPARTE NA ZAPISANYM PRIORYTECIE ZADANIA)
+// Nagrody w Smaczkach (tylko W TERMINIE)
+const REWARD_CONFIG = {
+    low: 1,      
+    medium: 2,   
+    urgent: 3,   
+    overdue: 4, 
+};
+// Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
+const PENALTY_CONFIG = {
+    low: 5,      
+    medium: 5,   
+    urgent: 10,  
+    overdue: 15, 
+};
+// ---------------------------------------------------------------------------------------
+
+>>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
