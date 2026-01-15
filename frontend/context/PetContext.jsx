@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 // frontend/context/PetContext.jsx
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-=======
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db } from "../services/firebase";
@@ -276,16 +272,13 @@ export function PetProvider({ children }) {
     const unsubscribe = onSnapshot(petDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-<<<<<<< HEAD
         setPetName(data.petName || "Twój pupil");
         setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
-=======
         setSelectedPetId(data.selectedPetId ?? 1);
 
         // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
-        setPetName(data.petName || petName);
-        setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
+        //setPetName(data.petName || petName);
+        //setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
         setTreatsBalance(data.treatsBalance !== undefined ? data.treatsBalance : 0);
         setPetImage(data.petImage || require("../assets/images/dog/starting_position/dog_starting_position.png"));
         setDailyRewardStreak(data.dailyRewardStreak ?? 0);
@@ -368,7 +361,7 @@ export function PetProvider({ children }) {
       if (diffDays >= 3) healthPenalty = 15;
       else if (diffDays === 2) healthPenalty = 10;
       else if (diffDays === 1) healthPenalty = 5;
-      
+
       currentStreak = 0; // Resetujemy passę
     }
 

@@ -60,7 +60,7 @@ export default function RegisterScreen() {
 
       alert(
         "Twoje konto zostało utworzone.\n\n" +
-        "Wysłaliśmy link aktywacyjny na: " + email + "\n\n" +
+        "Wysłaliśmy link aktywacyjny na wprowadzony adres email." + "\n\n" +
         "Po potwierdzeniu możesz się zalogować."
       );
 

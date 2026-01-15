@@ -1,13 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { usePet } from "./PetContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useEffect, useState } from "react";
+import { usePet } from "./PetContext";
 
 // Definicje stałych
 export const TASK_ICONS = [
   { name: "Dom", icons: ["🏠", "🧹", "🧺", "🌱", "🍳", "🛋️", "🚿", "🔑", "📦", "🛌"] },
   { name: "Nauka", icons: ["📚", "✏️", "🎓", "🔬", "📝", "🧠", "🎨", "📐", "💻", "📖"] },
   { name: "Praca", icon: "💼", icons: ["💼", "📊", "📞", "📅", "📎", "📁", "⌨️", "🤝", "📧", "🏢"] },
-  { name: "Ludzie", icons: ["👥", "👫", "👩","👨","👩‍💻","🧑‍🤝‍🧑","👩‍🤝‍👩", "🤱", "👨‍👩‍👧", "👴", "🤳", "🗣️", "🫂", "💌", "🎁"] },
+  { name: "Ludzie", icons: ["👥", "👫", "👩", "👨", "👩‍💻", "🧑‍🤝‍🧑", "👩‍🤝‍👩", "🤱", "👨‍👩‍👧", "👴", "🤳", "🗣️", "🫂", "💌", "🎁"] },
   { name: "Hobby", icons: ["🎨", "🎸", "📸", "🎮", "🧶", "🧩", "🎣", "🛹", "🎬", "🎤"] },
   { name: "Zwierzęta", icons: ["🐾", "🐕", "🐈", "🐎", "🦜", "🐢", "🐠", "🐹", "🐝", "🦋"] },
   { name: "Transport", icons: ["🚗", "🚲", "🚌", "🚆", "✈️", "🚢", "🛴", "⛽", "🗺️", "🚥"] },
@@ -22,48 +22,29 @@ export const PRIORITY_OPTIONS = [
   { value: "low", label: "Niski", color: "#34C759", basePoints: 5 },
 ];
 
-<<<<<<< HEAD
-=======
-export const TASK_ICONS = [
-    { icon: "📝", label: "Notatka" },
-    { icon: "💻", label: "Praca" },
-    { icon: "🛒", label: "Zakupy" },
-    { icon: "🏋️", label: "Sport" },
-    { icon: "📚", label: "Nauka" },
-    { icon: "📊", label: "Raport" },
-    { icon: "📧", label: "E-mail" },
-    { icon: "🧹", label: "Sprzątanie" },
-    { icon: "🧺", label: "Pranie" },
-    { icon: "🍽️", label: "Gotowanie" },
-    { icon: "🛠️", label: "Naprawa" },
-    { icon: "💡", label: "Pomysł" },
-    { icon: "📞", label: "Telefon" },
-];
-
 // ✅ NOWE STAŁE PUNKTACJI (OPARTE NA ZAPISANYM PRIORYTECIE ZADANIA)
 // Nagrody w Smaczkach (tylko W TERMINIE)
 const REWARD_CONFIG = {
-    low: 1,      
-    medium: 2,   
-    urgent: 3,   
-    overdue: 4, 
+  low: 1,
+  medium: 2,
+  urgent: 3,
+  overdue: 4,
 };
 // Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
 const PENALTY_CONFIG = {
-    low: 5,      
-    medium: 5,   
-    urgent: 10,  
-    overdue: 15, 
+  low: 5,
+  medium: 5,
+  urgent: 10,
+  overdue: 15,
 };
 // ---------------------------------------------------------------------------------------
 
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pobieramy funkcje z PetContext do zarządzania XP i karmą
   const { addTreats, removeHealthPoints } = usePet();
 
@@ -98,7 +79,7 @@ export function TaskProvider({ children }) {
           const now = new Date();
           const deadlineStr = `${task.deadline}T${task.endTime || "23:59"}`;
           const deadlineDate = new Date(deadlineStr);
-          
+
           const diffMs = now - deadlineDate;
           const diffMins = diffMs / (1000 * 60);
 
@@ -146,22 +127,22 @@ export function TaskProvider({ children }) {
 
   const deleteTask = (taskId) => {
     setTasks((prevTasks) => {
-        // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
-        return prevTasks.filter((task) => task.id !== taskId);
+      // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
+      return prevTasks.filter((task) => task.id !== taskId);
     });
   };
 
   const editTask = (taskId, updatedData) => {
-    setTasks((prevTasks) => 
-        prevTasks.map((task) => (task.id === taskId ? { ...task, ...updatedData } : task))
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === taskId ? { ...task, ...updatedData } : task))
     );
   };
 
   const getTasksByCategory = (selectedTags = []) => {
     const today = new Date().toISOString().split("T")[0];
     const filtered = selectedTags.length > 0
-        ? tasks.filter((task) => task.hashtags.some((tag) => selectedTags.includes(tag)))
-        : tasks;
+      ? tasks.filter((task) => task.hashtags.some((tag) => selectedTags.includes(tag)))
+      : tasks;
 
     const overdue = [];
     const todayTasks = [];
@@ -197,7 +178,7 @@ export function TaskProvider({ children }) {
       addTask,
       deleteTask,
       toggleTaskCompletion,
-      editTask, 
+      editTask,
       getTasksByCategory,
       loading,
     }}>

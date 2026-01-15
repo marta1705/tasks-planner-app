@@ -6,7 +6,7 @@ import { EmailAuthProvider, getAuth, reauthenticateWithCredential, reload, signO
 import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { usePet } from "../../context/PetContext"; 
+import { usePet } from "../../context/PetContext";
 import { useTheme } from "../../context/ThemeContext";
 
 export default function SettingsScreen() {
@@ -126,6 +126,12 @@ export default function SettingsScreen() {
 
       if (newPassword !== confirmNewPassword) {
         Alert.alert("Błąd", "Hasła nie są identyczne");
+        setLoading(false);
+        return;
+      }
+
+      if (currentPassword === newPassword) {
+        Alert.alert("Błąd", "Nowe hasło nie może być takie samo jak aktualne.");
         setLoading(false);
         return;
       }
@@ -265,11 +271,11 @@ export default function SettingsScreen() {
         <Ionicons name="log-out-outline" size={22} color="#fff" />
         <Text style={styles.logoutButtonText}>Wyloguj się</Text>
       </TouchableOpacity>
-
+      {/* 
       <TouchableOpacity style={styles.deleteButton}>
         <Ionicons name="warning-outline" size={22} color="#fff" />
         <Text style={styles.deleteButtonText}>Usuń konto</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {/* Modal Email */}
       <Modal visible={emailModalVisible} transparent animationType="slide">
@@ -326,7 +332,7 @@ export default function SettingsScreen() {
                 onPress={() => setShowCurrentPassword(!showCurrentPassword)}
               >
                 <Ionicons
-                  name={showCurrentPassword ? "eye-outline" : "eye-off-outline"}
+                  name={showCurrentPassword ? "eye-off-outline" : "eye-outline"}
                   size={22}
                   color="#555"
                 />
@@ -345,7 +351,7 @@ export default function SettingsScreen() {
                 onPress={() => setShowNewPassword(!showNewPassword)}
               >
                 <Ionicons
-                  name={showNewPassword ? "eye-outline" : "eye-off-outline"}
+                  name={showNewPassword ? "eye-off-outline" : "eye-outline"}
                   size={22}
                   color="#555"
                 />
@@ -364,7 +370,7 @@ export default function SettingsScreen() {
                 onPress={() => setShowRepeatPassword(!showRepeatPassword)}
               >
                 <Ionicons
-                  name={showRepeatPassword ? "eye-outline" : "eye-off-outline"}
+                  name={showRepeatPassword ? "eye-off-outline" : "eye-outline"}
                   size={22}
                   color="#555"
                 />
@@ -406,7 +412,7 @@ export default function SettingsScreen() {
                   ]}
                   onPress={() => handleSelectPet(pet)}
                 >
-                  <Image source={pet.image} style={styles.petOptionImage} resizeMode="contain" />
+                  <Image source={pet.states.starting_position.image} style={styles.petOptionImage} resizeMode="contain" />
                   <Text style={[styles.petOptionName, { color: colors.text }]}>{pet.name}</Text>
                 </TouchableOpacity>
               ))}
