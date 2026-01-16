@@ -9,6 +9,7 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Feather from "@expo/vector-icons/Feather";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 const HabitItem = ({
   habit,
@@ -19,19 +20,6 @@ const HabitItem = ({
   getHabitStreak,
 }) => {
   const swipeableRef = useRef(null);
-
-  const lightenColor = (hex, percent) => {
-    const num = parseInt(hex.replace("#", ""), 16);
-    let r = (num >> 16) + Math.round(255 * (percent / 100));
-    let g = ((num >> 8) & 0x00ff) + Math.round(255 * (percent / 100));
-    let b = (num & 0x0000ff) + Math.round(255 * (percent / 100));
-
-    r = r > 255 ? 255 : r;
-    g = g > 255 ? 255 : g;
-    b = b > 255 ? 255 : b;
-
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  };
 
   const renderRightActions = (progress, dragX) => {
     const scale = dragX.interpolate({
@@ -51,7 +39,7 @@ const HabitItem = ({
           <Animated.Text
             style={[styles.actionText, { transform: [{ scale }] }]}
           >
-            <Feather name="edit-2" size={32} color="white" />
+            <Feather name="edit-2" size={28} color="white" />
           </Animated.Text>
         </TouchableOpacity>
 
@@ -65,7 +53,7 @@ const HabitItem = ({
           <Animated.Text
             style={[styles.actionText, { transform: [{ scale }] }]}
           >
-            <Ionicons name="trash-outline" size={32} color="white" />
+            <Ionicons name="trash-outline" size={28} color="white" />
           </Animated.Text>
         </TouchableOpacity>
       </View>
@@ -82,15 +70,8 @@ const HabitItem = ({
       <TouchableOpacity
         style={[
           styles.habitItem,
-          isCompleted && {
-            backgroundColor: "#f9f9f9",
-            opacity: 0.6,
-          },
-          {
-            backgroundColor: lightenColor(habit.color || "#007AFF", 98),
-            borderLeftWidth: 4,
-            borderLeftColor: habit.color || "#007AFF",
-          },
+          isCompleted && styles.habitItemCompleted,
+          { borderLeftColor: habit.color || "#61ADE1" },
         ]}
         onPress={() => onToggle(habit.id)}
       >
@@ -98,12 +79,13 @@ const HabitItem = ({
           style={[
             styles.iconContainer,
             {
-              backgroundColor: habit.color || "#007AFF",
+              backgroundColor: habit.color || "#61ADE1",
             },
           ]}
         >
           <Text style={styles.icon}>{habit.icon || "🎯"}</Text>
         </View>
+
         <View style={styles.habitContent}>
           <View style={styles.habitHeader}>
             <Text
@@ -111,23 +93,33 @@ const HabitItem = ({
                 styles.habitName,
                 isCompleted && styles.habitNameCompleted,
               ]}
+              numberOfLines={1}
             >
               {habit.name}
             </Text>
-            <View style={styles.streakContainer}>
-              <Text style={styles.streakText}>
-                🔥 {getHabitStreak(habit.id)}
-              </Text>
-            </View>
+            {getHabitStreak(habit.id) > 0 && (
+              <View style={styles.streakContainer}>
+                <Text style={styles.streakText}>
+                  🔥 {getHabitStreak(habit.id)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {habit.hashtags && habit.hashtags.length > 0 && (
             <View style={styles.habitTags}>
-              {habit.hashtags.map((tag, index) => (
-                <Text key={index} style={styles.habitTag}>
-                  {tag}
-                </Text>
+              {habit.hashtags.slice(0, 3).map((tag, index) => (
+                <View key={index} style={styles.habitTag}>
+                  <Text style={styles.habitTagText}>{tag}</Text>
+                </View>
               ))}
+              {habit.hashtags.length > 3 && (
+                <View style={styles.habitTag}>
+                  <Text style={styles.habitTagText}>
+                    +{habit.hashtags.length - 3}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -136,7 +128,7 @@ const HabitItem = ({
               ? "Codziennie"
               : habit.frequency === "weekly"
               ? "Tygodniowo"
-              : `Niestandardowe: ${habit.customDays.join(", ")}`}
+              : `${habit.customDays.join(", ")}`}
           </Text>
         </View>
 
@@ -144,12 +136,12 @@ const HabitItem = ({
           style={[
             styles.checkbox,
             isCompleted && {
-              backgroundColor: habit.color || "#007AFF",
-              borderColor: habit.color || "#007AFF",
+              backgroundColor: habit.color || "#61ADE1",
+              borderColor: habit.color || "#61ADE1",
             },
           ]}
         >
-          {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+          {isCompleted && <Ionicons name="checkmark" size={20} color="#fff" />}
         </View>
       </TouchableOpacity>
     </Swipeable>
@@ -160,41 +152,52 @@ const styles = StyleSheet.create({
   habitItem: {
     backgroundColor: "#fff",
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    marginVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 1, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
+    borderLeftWidth: 4,
+  },
+  habitItemCompleted: {
+    opacity: 0.6,
   },
   iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   icon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   habitContent: {
     flex: 1,
+    justifyContent: "center",
   },
   habitHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   habitName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#275777",
     flex: 1,
+    marginRight: 8,
   },
   habitNameCompleted: {
     textDecorationLine: "line-through",
@@ -202,67 +205,70 @@ const styles = StyleSheet.create({
   },
   streakContainer: {
     backgroundColor: "#FFF3E0",
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FFE0B2",
   },
   streakText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#F57C00",
   },
   habitTags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 4,
+    marginBottom: 6,
+    gap: 6,
   },
   habitTag: {
-    fontSize: 12,
-    color: "#666",
-    marginRight: 8,
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: "#e3eef7",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  habitTagText: {
+    fontSize: 11,
+    color: "#275777",
+    fontWeight: "600",
   },
   habitFrequency: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
+    fontSize: 13,
+    color: "#61ADE1",
+    fontWeight: "500",
   },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#ddd",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2.5,
+    borderColor: "#e3eef7",
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
   },
-  checkmark: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   rightActionsContainer: {
     flexDirection: "row",
-    marginBottom: 12,
+    marginVertical: 12,
+    gap: 5,
   },
   actionButton: {
     justifyContent: "center",
     alignItems: "center",
-    width: 80,
+    width: 70,
+    borderRadius: 20,
   },
   editButton: {
-    backgroundColor: "#4CAF50",
-    borderRadius: 12,
-    marginLeft: 5,
+    backgroundColor: "#61ADE1",
   },
   deleteButton: {
-    backgroundColor: "#F44336",
-    borderRadius: 12,
-    marginLeft: 5,
+    backgroundColor: "#ff6b6b",
+  },
+  actionText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 });
 

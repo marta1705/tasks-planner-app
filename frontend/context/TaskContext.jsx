@@ -4,17 +4,147 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Definicje stałych
 export const TASK_ICONS = [
-  { name: "Dom", icons: ["🏠", "🧹", "🧺", "🌱", "🍳", "🛋️", "🚿", "🔑", "📦", "🛌"] },
-  { name: "Nauka", icons: ["📚", "✏️", "🎓", "🔬", "📝", "🧠", "🎨", "📐", "💻", "📖"] },
-  { name: "Praca", icon: "💼", icons: ["💼", "📊", "📞", "📅", "📎", "📁", "⌨️", "🤝", "📧", "🏢"] },
-  { name: "Ludzie", icons: ["👥", "👫", "👩","👨","👩‍💻","🧑‍🤝‍🧑","👩‍🤝‍👩", "🤱", "👨‍👩‍👧", "👴", "🤳", "🗣️", "🫂", "💌", "🎁"] },
-  { name: "Hobby", icons: ["🎨", "🎸", "📸", "🎮", "🧶", "🧩", "🎣", "🛹", "🎬", "🎤"] },
-  { name: "Zwierzęta", icons: ["🐾", "🐕", "🐈", "🐎", "🦜", "🐢", "🐠", "🐹", "🐝", "🦋"] },
-  { name: "Transport", icons: ["🚗", "🚲", "🚌", "🚆", "✈️", "🚢", "🛴", "⛽", "🗺️", "🚥"] },
+  {
+    name: "Dom",
+    icons: [
+      "🏠",
+      "🧹",
+      "🧺",
+      "🌱",
+      "🍳",
+      "🛋️",
+      "🚿",
+      "🔑",
+      "📦",
+      "🛌",
+      "🔨",
+      "📺",
+    ],
+  },
+  {
+    name: "Nauka",
+    icons: [
+      "📚",
+      "✏️",
+      "🎓",
+      "🔬",
+      "📝",
+      "🧠",
+      "🎨",
+      "📐",
+      "💻",
+      "📖",
+      "🎒",
+      "📔",
+    ],
+  },
+  {
+    name: "Praca",
+    icon: "💼",
+    icons: [
+      "💼",
+      "📊",
+      "📞",
+      "📅",
+      "📎",
+      "📁",
+      "⌨️",
+      "🤝",
+      "📧",
+      "🏢",
+      "🥼",
+      "🗃",
+    ],
+  },
+  {
+    name: "Ludzie",
+    icons: [
+      "👥",
+      "👫",
+      "👩",
+      "👨",
+      "👩‍💻",
+      "🧑‍🤝‍🧑",
+      "👩‍🤝‍👩",
+      "🤱",
+      "👨‍👩‍👧",
+      "👴",
+      "🤳",
+      "🗣️",
+      "🫂",
+      "💌",
+      "🎁",
+      "🧚",
+      "💃",
+      "🕺",
+    ],
+  },
+  {
+    name: "Hobby",
+    icons: [
+      "🎨",
+      "🎸",
+      "📸",
+      "🎮",
+      "🧶",
+      "🧩",
+      "🎣",
+      "🛹",
+      "🎬",
+      "🎤",
+      "⚽️",
+      "🎹",
+    ],
+  },
+  {
+    name: "Zwierzęta",
+    icons: [
+      "🐾",
+      "🐕",
+      "🐈",
+      "🐎",
+      "🦜",
+      "🐢",
+      "🐠",
+      "🐹",
+      "🐝",
+      "🦋",
+      "🐒",
+      "🦥",
+    ],
+  },
+  {
+    name: "Transport",
+    icons: [
+      "🚗",
+      "🚲",
+      "🚌",
+      "🚆",
+      "✈️",
+      "🚢",
+      "🛴",
+      "⛽",
+      "🗺️",
+      "🚥",
+      "🛵",
+      "🚑",
+    ],
+  },
 ];
 
 // Lista podstawowa (pierwsze 10 ikon do wyświetlenia na ekranie głównym)
-export const BASIC_ICONS = ["💼", "📚", "💪", "🏠", "🛒", "🍳", "💰", "👥", "🎨", "🌟"];
+export const BASIC_ICONS = [
+  "💼",
+  "📚",
+  "💪",
+  "🏠",
+  "🛒",
+  "🍳",
+  "💰",
+  "👥",
+  "🎨",
+  "🌟",
+];
 
 export const PRIORITY_OPTIONS = [
   { value: "high", label: "Wysoki", color: "#FF3B30", basePoints: 15 },
@@ -22,55 +152,52 @@ export const PRIORITY_OPTIONS = [
   { value: "low", label: "Niski", color: "#34C759", basePoints: 5 },
 ];
 
-<<<<<<< HEAD
-=======
-export const TASK_ICONS = [
-    { icon: "📝", label: "Notatka" },
-    { icon: "💻", label: "Praca" },
-    { icon: "🛒", label: "Zakupy" },
-    { icon: "🏋️", label: "Sport" },
-    { icon: "📚", label: "Nauka" },
-    { icon: "📊", label: "Raport" },
-    { icon: "📧", label: "E-mail" },
-    { icon: "🧹", label: "Sprzątanie" },
-    { icon: "🧺", label: "Pranie" },
-    { icon: "🍽️", label: "Gotowanie" },
-    { icon: "🛠️", label: "Naprawa" },
-    { icon: "💡", label: "Pomysł" },
-    { icon: "📞", label: "Telefon" },
-];
+// export const TASK_ICONS = [
+//     { icon: "📝", label: "Notatka" },
+//     { icon: "💻", label: "Praca" },
+//     { icon: "🛒", label: "Zakupy" },
+//     { icon: "🏋️", label: "Sport" },
+//     { icon: "📚", label: "Nauka" },
+//     { icon: "📊", label: "Raport" },
+//     { icon: "📧", label: "E-mail" },
+//     { icon: "🧹", label: "Sprzątanie" },r
+//     { icon: "🧺", label: "Pranie" },
+//     { icon: "🍽️", label: "Gotowanie" },
+//     { icon: "🛠️", label: "Naprawa" },
+//     { icon: "💡", label: "Pomysł" },
+//     { icon: "📞", label: "Telefon" },
+// ];
 
 // ✅ NOWE STAŁE PUNKTACJI (OPARTE NA ZAPISANYM PRIORYTECIE ZADANIA)
 // Nagrody w Smaczkach (tylko W TERMINIE)
 const REWARD_CONFIG = {
-    low: 1,      
-    medium: 2,   
-    urgent: 3,   
-    overdue: 4, 
+  low: 1,
+  medium: 2,
+  urgent: 3,
+  overdue: 4,
 };
 // Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
 const PENALTY_CONFIG = {
-    low: 5,      
-    medium: 5,   
-    urgent: 10,  
-    overdue: 15, 
+  low: 5,
+  medium: 5,
+  urgent: 10,
+  overdue: 15,
 };
 // ---------------------------------------------------------------------------------------
 
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pobieramy funkcje z PetContext do zarządzania XP i karmą
   const { addTreats, removeHealthPoints } = usePet();
 
   useEffect(() => {
     const loadTasks = async () => {
       try {
-        const storedTasks = await AsyncStorage.getItem('tasks');
+        const storedTasks = await AsyncStorage.getItem("tasks");
         if (storedTasks) {
           setTasks(JSON.parse(storedTasks));
         }
@@ -85,7 +212,7 @@ export function TaskProvider({ children }) {
 
   useEffect(() => {
     if (!loading) {
-      AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+      AsyncStorage.setItem("tasks", JSON.stringify(tasks));
     }
   }, [tasks, loading]);
 
@@ -98,11 +225,13 @@ export function TaskProvider({ children }) {
           const now = new Date();
           const deadlineStr = `${task.deadline}T${task.endTime || "23:59"}`;
           const deadlineDate = new Date(deadlineStr);
-          
+
           const diffMs = now - deadlineDate;
           const diffMins = diffMs / (1000 * 60);
 
-          const priorityOpt = PRIORITY_OPTIONS.find(opt => opt.value === task.priority) || PRIORITY_OPTIONS[1];
+          const priorityOpt =
+            PRIORITY_OPTIONS.find((opt) => opt.value === task.priority) ||
+            PRIORITY_OPTIONS[1];
           const baseValue = priorityOpt.basePoints;
 
           if (diffMins <= 10) {
@@ -137,8 +266,8 @@ export function TaskProvider({ children }) {
         isCompleted: false,
         createdAt: new Date().toISOString(),
         startDate: task.startDate || new Date().toISOString().split("T")[0],
-        startTime: task.startTime || '09:00',
-        endTime: task.endTime || '10:00',
+        startTime: task.startTime || "09:00",
+        endTime: task.endTime || "10:00",
         deadline: task.deadline || new Date().toISOString().split("T")[0],
       },
     ]);
@@ -146,21 +275,26 @@ export function TaskProvider({ children }) {
 
   const deleteTask = (taskId) => {
     setTasks((prevTasks) => {
-        // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
-        return prevTasks.filter((task) => task.id !== taskId);
+      // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
+      return prevTasks.filter((task) => task.id !== taskId);
     });
   };
 
   const editTask = (taskId, updatedData) => {
-    setTasks((prevTasks) => 
-        prevTasks.map((task) => (task.id === taskId ? { ...task, ...updatedData } : task))
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, ...updatedData } : task
+      )
     );
   };
 
   const getTasksByCategory = (selectedTags = []) => {
     const today = new Date().toISOString().split("T")[0];
-    const filtered = selectedTags.length > 0
-        ? tasks.filter((task) => task.hashtags.some((tag) => selectedTags.includes(tag)))
+    const filtered =
+      selectedTags.length > 0
+        ? tasks.filter((task) =>
+            task.hashtags.some((tag) => selectedTags.includes(tag))
+          )
         : tasks;
 
     const overdue = [];
@@ -187,20 +321,24 @@ export function TaskProvider({ children }) {
       overdue: overdue.sort(sortByPriorityAndDeadline),
       today: todayTasks.sort(sortByPriorityAndDeadline),
       upcoming: upcoming.sort(sortByPriorityAndDeadline),
-      completed: completed.sort((a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0),
+      completed: completed.sort(
+        (a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0
+      ),
     };
   };
 
   return (
-    <TaskContext.Provider value={{
-      tasks,
-      addTask,
-      deleteTask,
-      toggleTaskCompletion,
-      editTask, 
-      getTasksByCategory,
-      loading,
-    }}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        addTask,
+        deleteTask,
+        toggleTaskCompletion,
+        editTask,
+        getTasksByCategory,
+        loading,
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );

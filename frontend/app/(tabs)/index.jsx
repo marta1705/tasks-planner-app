@@ -9,7 +9,6 @@ import { FloatingAction } from "react-native-floating-action";
 import { useTheme } from "../../context/ThemeContext";
 import PetWidget from "../PetWidget";
 
-
 export default function Index() {
   const auth = getAuth();
   const router = useRouter();
@@ -19,7 +18,6 @@ export default function Index() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-
 
       (async () => {
         if (auth.currentUser) {
@@ -32,7 +30,9 @@ export default function Index() {
         }
       })();
 
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }, [])
   );
 
@@ -40,14 +40,14 @@ export default function Index() {
     {
       text: "Dodaj zadanie",
       icon: <MaterialIcons name="add-task" size={24} color="#fff" />,
-      color: "#1BCE4B", // kolor tła kółka
+      color: "#61ADE1", // kolor tła kółka
       name: "bt_add_task",
       position: 1,
     },
     {
       text: "Dodaj nawyk",
       icon: <Entypo name="add-to-list" size={24} color="#fff" />,
-      color: "#e623e2ff", // inny kolor tła
+      color: "#61ADE1", // inny kolor tła
       name: "bt_add_habit",
       position: 2,
     },
@@ -57,13 +57,21 @@ export default function Index() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TouchableOpacity
         style={styles.settingsButton}
-        onPress={() => router.push("/settings")}>
+        onPress={() => router.push("/settings")}
+      >
         <Ionicons name="settings-outline" size={30} color="white" />
       </TouchableOpacity>
-      <Text style={[styles.text, { fontFamily: "AlfaSlabOne", fontSize: 20, marginVertical: 20 }]}>
+      <Text
+        style={[
+          styles.text,
+          { fontFamily: "AlfaSlabOne", fontSize: 20, marginVertical: 20 },
+        ]}
+      >
         <Text style={{ color: "#61ADE1" }}>Witaj, {userName}!</Text>
       </Text>
-      <Text style={[styles.text2, { color: colors.text2 }]}><Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text></Text>
+      <Text style={[styles.text2, { color: colors.text2 }]}>
+        <Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text>
+      </Text>
       <PetWidget />
       <FloatingAction
         actions={actions}
@@ -86,21 +94,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     //backgroundColor: "#f5f5f5",
   },
-text: {
-  fontSize: 20,
-  color: "#61ADE1",
-  fontFamily: "AlfaSlabOne",
-  marginBottom: 15,
-  textAlign: "center",
-},
+  text: {
+    fontSize: 20,
+    color: "#61ADE1",
+    fontFamily: "AlfaSlabOne",
+    marginBottom: 15,
+    textAlign: "center",
+  },
 
-text2: {
-  fontSize: 12,
-  fontFamily: "AlfaSlabOne",
-  marginBottom: 15,
-  textAlign: "center",
-},
-
+  text2: {
+    fontSize: 12,
+    fontFamily: "AlfaSlabOne",
+    marginBottom: 15,
+    textAlign: "center",
+  },
 
   logoutButton: {
     backgroundColor: "#ff4444",

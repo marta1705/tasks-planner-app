@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-// frontend/context/PetContext.jsx
-
-import React, { createContext, useContext, useState, useEffect } from "react";
-=======
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db } from "../services/firebase";
@@ -17,8 +11,8 @@ const TREAT_COST_IN_HEALTH = 2;
 // FUNKCJE POMOCNICZE
 const toDateString = (date) => {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
 
@@ -249,7 +243,9 @@ const getVisualKeyByHealth = (hp) => {
 export function PetProvider({ children }) {
   const [petHealth, setPetHealth] = useState(100);
   const [petName, setPetName] = useState("Twój pupil");
-  const [petImage, setPetImage] = useState(require("../assets/images/dog/starting_position/dog_starting_position.png"));
+  const [petImage, setPetImage] = useState(
+    require("../assets/images/dog/starting_position/dog_starting_position.png")
+  );
   const [treatsBalance, setTreatsBalance] = useState(0);
   const [selectedPetId, setSelectedPetId] = useState(1);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -259,7 +255,8 @@ export function PetProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.uid;
 
-  const currentPet = PET_OPTIONS.find(p => p.id === selectedPetId) || PET_OPTIONS[0];
+  const currentPet =
+    PET_OPTIONS.find((p) => p.id === selectedPetId) || PET_OPTIONS[0];
 
   const getPetDocRef = () => {
     if (!userId || !db) return null;
@@ -276,31 +273,35 @@ export function PetProvider({ children }) {
     const unsubscribe = onSnapshot(petDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-<<<<<<< HEAD
-        setPetName(data.petName || "Twój pupil");
-        setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
-=======
         setSelectedPetId(data.selectedPetId ?? 1);
 
         // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
         setPetName(data.petName || petName);
         setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
->>>>>>> 3516ce59426a8ceb078770e9f8b87baabe878085
-        setTreatsBalance(data.treatsBalance !== undefined ? data.treatsBalance : 0);
-        setPetImage(data.petImage || require("../assets/images/dog/starting_position/dog_starting_position.png"));
+        setTreatsBalance(
+          data.treatsBalance !== undefined ? data.treatsBalance : 0
+        );
+        setPetImage(
+          data.petImage ||
+            require("../assets/images/dog/starting_position/dog_starting_position.png")
+        );
         setDailyRewardStreak(data.dailyRewardStreak ?? 0);
         setLastRewardClaimDate(data.lastRewardClaimDate ?? null);
         setSelectedPetId(data.selectedPetId || 1);
       } else {
-        setDoc(petDocRef, {
-          petName: "Twój pupil",
-          petHealth: 100,
-          treatsBalance: 0,
-          selectedPetId: 1,
-          lastUpdate: new Date().toISOString(),
-          dailyRewardStreak: 0,
-          lastRewardClaimDate: null,
-        }, { merge: true });
+        setDoc(
+          petDocRef,
+          {
+            petName: "Twój pupil",
+            petHealth: 100,
+            treatsBalance: 0,
+            selectedPetId: 1,
+            lastUpdate: new Date().toISOString(),
+            dailyRewardStreak: 0,
+            lastRewardClaimDate: null,
+          },
+          { merge: true }
+        );
       }
       setIsDataLoaded(true);
     });
@@ -314,7 +315,7 @@ export function PetProvider({ children }) {
     try {
       await updateDoc(petDocRef, {
         ...updates,
-        lastUpdate: new Date().toISOString()
+        lastUpdate: new Date().toISOString(),
       });
     } catch (error) {
       console.error("Błąd zapisu do Firestore:", error);
@@ -339,7 +340,10 @@ export function PetProvider({ children }) {
       const newHealth = Math.min(100, petHealth + TREAT_COST_IN_HEALTH);
       setTreatsBalance(newBalance);
       setPetHealth(newHealth);
-      savePetStateToFirestore({ treatsBalance: newBalance, petHealth: newHealth });
+      savePetStateToFirestore({
+        treatsBalance: newBalance,
+        petHealth: newHealth,
+      });
       return true;
     }
     return false;
@@ -350,7 +354,8 @@ export function PetProvider({ children }) {
     const today = new Date();
     const todayStr = toDateString(today);
 
-    if (lastRewardClaimDate === todayStr) return { success: false, message: "Już odebrano." };
+    if (lastRewardClaimDate === todayStr)
+      return { success: false, message: "Już odebrano." };
 
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
@@ -368,7 +373,7 @@ export function PetProvider({ children }) {
       if (diffDays >= 3) healthPenalty = 15;
       else if (diffDays === 2) healthPenalty = 10;
       else if (diffDays === 1) healthPenalty = 5;
-      
+
       currentStreak = 0; // Resetujemy passę
     }
 
@@ -414,10 +419,14 @@ export function PetProvider({ children }) {
   };
 
   const getPetStatus = () => {
-    if (petHealth >= 80) return { status: "super", emoji: "😊", color: "#4CAF50" };
-    if (petHealth >= 60) return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
-    if (petHealth >= 40) return { status: "okej", emoji: "😐", color: "#FFC107" };
-    if (petHealth >= 20) return { status: "słabo", emoji: "😟", color: "#FF9800" };
+    if (petHealth >= 80)
+      return { status: "super", emoji: "😊", color: "#4CAF50" };
+    if (petHealth >= 60)
+      return { status: "dobrze", emoji: "🙂", color: "#8BC34A" };
+    if (petHealth >= 40)
+      return { status: "okej", emoji: "😐", color: "#FFC107" };
+    if (petHealth >= 20)
+      return { status: "słabo", emoji: "😟", color: "#FF9800" };
     return { status: "źle", emoji: "😢", color: "#F44336" };
   };
 

@@ -13,14 +13,39 @@ export default function TabLayout() {
     <TagsProvider>
       <TaskProvider>
         <HabitProvider>
-          <Tabs>
+          <Tabs
+            screenOptions={{
+              tabBarActiveTintColor: "#61ADE1",
+              tabBarStyle: {
+                backgroundColor: "#fff",
+                borderTopWidth: 0,
+                elevation: 8,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: -3 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+              },
+              tabBarLabelStyle: {
+                fontSize: 10,
+                fontWeight: "600",
+                marginTop: 4,
+              },
+              tabBarIconStyle: {
+                marginTop: 4,
+              },
+            }}
+          >
             <Tabs.Screen
               name="index"
               options={{
-                title: "Home",
+                title: "Strona główna",
                 headerShown: false,
-                tabBarIcon: ({ color }) => (
-                  <Octicons name="home" size={24} color={color} />
+                tabBarIcon: ({ color, focused }) => (
+                  <Octicons
+                    name="home"
+                    size={focused ? 28 : 24}
+                    color={color}
+                  />
                 ),
               }}
             />
@@ -29,8 +54,12 @@ export default function TabLayout() {
               options={{
                 title: "Zadania",
                 headerShown: false,
-                tabBarIcon: ({ color }) => (
-                  <FontAwesome5 name="tasks" size={24} color={color} />
+                tabBarIcon: ({ color, focused }) => (
+                  <FontAwesome5
+                    name="tasks"
+                    size={focused ? 28 : 24}
+                    color={color}
+                  />
                 ),
               }}
             />
@@ -39,8 +68,12 @@ export default function TabLayout() {
               options={{
                 title: "Nawyki",
                 headerShown: false,
-                tabBarIcon: ({ color }) => (
-                  <MaterialIcons name="task-alt" size={24} color={color} />
+                tabBarIcon: ({ color, focused }) => (
+                  <MaterialIcons
+                    name="task-alt"
+                    size={focused ? 28 : 24}
+                    color={color}
+                  />
                 ),
               }}
             />
@@ -49,8 +82,12 @@ export default function TabLayout() {
               options={{
                 title: "Statystyki",
                 headerShown: false,
-                tabBarIcon: ({ color }) => (
-                  <Ionicons name="stats-chart" size={24} color={color} />
+                tabBarIcon: ({ color, focused }) => (
+                  <Ionicons
+                    name="stats-chart"
+                    size={focused ? 28 : 24}
+                    color={color}
+                  />
                 ),
               }}
             />

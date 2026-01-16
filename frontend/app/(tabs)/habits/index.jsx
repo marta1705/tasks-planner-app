@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,10 @@ import { useTags } from "../../../context/TagsContext";
 import CalendarStrip from "react-native-calendar-strip";
 import HabitItem from "./HabitItem";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import moment from "moment";
+import "moment/locale/pl";
+
+moment.locale("pl");
 
 export default function Habits() {
   const router = useRouter();
@@ -29,7 +33,9 @@ export default function Habits() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const calendarRef = useRef(null);
 
+  const todayDate = new Date();
   const today = new Date().toISOString().split("T")[0];
 
   const habitsForSelectedDate = useMemo(() => {
@@ -99,61 +105,81 @@ export default function Habits() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* header */}
+      <View style={styles.headerSection}>
         <Text style={styles.title}>Nawyki</Text>
         <Text style={styles.date}>
           {formatDate(selectedDate.toISOString().split("T")[0])}
         </Text>
       </View>
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowTagModal(true)}
-        >
-          <Text style={styles.buttonText}>
-            Filtry {filterTags.length > 0 && `(${filterTags.length})`}
-          </Text>
-        </TouchableOpacity>
+      {/* kalendarz i przyciski */}
 
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push("/(tabs)/habits/AddHabitScreen")}
-        >
-          <Text style={styles.buttonText}>+ Dodaj nawyk</Text>
-        </TouchableOpacity>
-      </View>
-
-      {filterTags.length > 0 && (
-        <View style={styles.activeFilters}>
-          <Text style={styles.activeFiltersLabel}>Aktywne filtry:</Text>
-          <View style={styles.filterTagsContainer}>
-            {filterTags.map((tag) => (
-              <View key={tag} style={styles.activeFilterTag}>
-                <Text style={styles.activeFilterText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <View style={{ flex: 1, paddingTop: 10 }}>
+      <View style={styles.calendarContainer}>
         <CalendarStrip
+          ref={calendarRef}
           scrollable
-          style={{ height: 100 }}
+          style={{ height: 100, paddingVertical: 10 }}
           selectedDate={selectedDate}
           onDateSelected={onDateChanged}
+          calendarHeaderStyle={{ color: "#275777", fontWeight: "700" }}
+          dateNumberStyle={{ color: "#275777" }}
+          dateNameStyle={{ color: "#61ADE1" }}
           highlightDateNameStyle={{ color: "#fff" }}
           highlightDateNumberStyle={{ color: "#fff" }}
           highlightDateContainerStyle={{
-            backgroundColor: "#007AFF",
-            borderRadius: 10,
+            backgroundColor: "#61ADE1",
+            borderRadius: 15,
+          }}
+          onHeaderSelected={() => {
+            calendarRef.current?.setSelectedDate(todayDate);
+            setSelectedDate(todayDate);
           }}
         />
 
-        <ScrollView style={styles.habitsList}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setShowTagModal(true)}
+          >
+            <Ionicons name="filter" size={18} color="#275777" />
+            <Text style={styles.filterButtonText}>
+              Filtry {filterTags.length > 0 && `(${filterTags.length})`}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("/(tabs)/habits/AddHabitScreen")}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.addButtonText}>Dodaj nawyk</Text>
+          </TouchableOpacity>
+        </View>
+
+        {filterTags.length > 0 && (
+          <View style={styles.activeFiltersSection}>
+            <Text style={styles.activeFiltersLabel}>Aktywne filtry:</Text>
+            <View style={styles.filterTagsContainer}>
+              {filterTags.map((tag) => (
+                <View key={tag} style={styles.activeFilterTag}>
+                  <Text style={styles.activeFilterText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* lista nawyków */}
+      <View style={styles.habitsListContainer}>
+        <ScrollView
+          style={styles.habitsList}
+          contentContainerStyle={styles.habitsListContent}
+        >
           {habitsForSelectedDate.length === 0 ? (
             <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={60} color="#275777" />
               <Text style={styles.emptyText}>
                 {filterTags.length > 0
                   ? "Brak nawyków pasujących do wybranych filtrów"
@@ -178,6 +204,7 @@ export default function Habits() {
         </ScrollView>
       </View>
 
+      {/* modal tagów */}
       <Modal
         visible={showTagModal}
         animationType="slide"
@@ -190,7 +217,7 @@ export default function Habits() {
               style={styles.closeButton}
               onPress={() => setShowTagModal(false)}
             >
-              <Text style={styles.closeButtonText}>Zamknij</Text>
+              <Ionicons name="close-circle" size={28} color="#275777" />
             </TouchableOpacity>
           </View>
 
@@ -200,6 +227,7 @@ export default function Habits() {
               value={newTag}
               onChangeText={setNewTag}
               placeholder="Dodaj nowy tag..."
+              placeholderTextColor="#999"
               onSubmitEditing={handleAddTag}
               returnKeyType="done"
             />
@@ -213,34 +241,47 @@ export default function Habits() {
 
           <Text style={styles.sectionTitle}>Filtruj według tagów:</Text>
           <ScrollView style={styles.tagsContainer}>
-            {tags.map((tag) => (
-              <View key={tag} style={styles.tagRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.filterTag,
-                    filterTags.includes(tag) && styles.filterTagSelected,
-                  ]}
-                  onPress={() => toggleFilterTag(tag)}
-                >
-                  <Text
-                    style={[
-                      styles.filterTagText,
-                      filterTags.includes(tag) && styles.filterTagTextSelected,
-                    ]}
-                  >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteTagButton}
-                  onPress={() => handleDeleteTag(tag)}
-                >
-                  <Text style={styles.deleteTagText}>
-                    <Ionicons name="trash-outline" size={32} color="black" />
-                  </Text>
-                </TouchableOpacity>
+            {tags.length === 0 ? (
+              <View style={styles.emptyTagsState}>
+                <Text style={styles.emptyTagsText}>
+                  Brak tagów. Dodaj pierwszy tag!
+                </Text>
               </View>
-            ))}
+            ) : (
+              tags.map((tag) => (
+                <View key={tag} style={styles.tagRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterTag,
+                      filterTags.includes(tag) && styles.filterTagSelected,
+                    ]}
+                    onPress={() => toggleFilterTag(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterTagText,
+                        filterTags.includes(tag) &&
+                          styles.filterTagTextSelected,
+                      ]}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteTagButton}
+                    onPress={() => handleDeleteTag(tag)}
+                  >
+                    <Text style={styles.deleteTagText}>
+                      <Ionicons
+                        name="trash-outline"
+                        size={24}
+                        color="#275777"
+                      />
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
           </ScrollView>
         </View>
       </Modal>
@@ -251,182 +292,234 @@ export default function Habits() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+  },
+  // header
+  headerSection: {
+    backgroundColor: "#fff",
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    alignItems: "center",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
+    fontSize: 36,
+    fontFamily: "AlfaSlabOne",
+    color: "#61ADE1",
     marginBottom: 5,
+    letterSpacing: 3,
   },
   date: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#275777",
+  },
+
+  // sekcja kalendarza
+  calendarContainer: {
+    backgroundColor: "#e3eef7",
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 15,
+    marginBottom: 10,
   },
   buttonRow: {
     flexDirection: "row",
-    padding: 15,
+    marginTop: 10,
     gap: 10,
   },
   filterButton: {
     flex: 1,
-    backgroundColor: "#e0e0e0",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  filterButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#275777",
   },
   addButton: {
     flex: 1,
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#61ADE1",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
+  addButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
     color: "#fff",
   },
-  activeFilters: {
-    paddingHorizontal: 15,
-    paddingBottom: 10,
+
+  activeFiltersSection: {
+    marginTop: 12,
   },
   activeFiltersLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 5,
+    fontSize: 13,
+    color: "#275777",
+    fontWeight: "600",
+    marginBottom: 6,
   },
   filterTagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: 6,
   },
   activeFilterTag: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 12,
+    backgroundColor: "#61ADE1",
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 4,
   },
   activeFilterText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  // lista nawyków
+  habitsListContainer: {
+    flex: 1,
   },
   habitsList: {
     flex: 1,
-    padding: 15,
+    paddingHorizontal: 15,
+  },
+  habitsListContent: {
+    paddingBottom: 20,
+    paddingTop: 10,
   },
   emptyState: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   emptyText: {
     fontSize: 16,
-    color: "#666",
+    color: "#275777",
     textAlign: "center",
-    marginBottom: 20,
+    marginTop: 20,
+    marginBottom: 24,
+    fontWeight: "600",
+    paddingHorizontal: 30,
   },
+
+  // modal tagów
   modalContainer: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fff",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    paddingBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: "#e3eef7",
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
+    fontSize: 24,
+    fontFamily: "AlfaSlabOne",
+    color: "#275777",
   },
   closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: "#007AFF",
-    fontSize: 16,
-    fontWeight: "600",
+    padding: 4,
   },
   addTagSection: {
     flexDirection: "row",
-    padding: 15,
-    backgroundColor: "#fff",
-    marginBottom: 20,
+    padding: 20,
+    backgroundColor: "#e3eef7",
+    gap: 10,
   },
   tagInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
     backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 20,
+    fontSize: 15,
+    color: "#275777",
   },
   addTagButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: "#61ADE1",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 20,
     justifyContent: "center",
   },
   addTagButtonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 15,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
-    paddingHorizontal: 15,
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#275777",
+    paddingHorizontal: 20,
+    marginBottom: 15,
+    marginTop: 20,
   },
   tagsContainer: {
     flex: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
+  },
+  emptyTagsState: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyTagsText: {
+    fontSize: 15,
+    color: "#999",
+    textAlign: "center",
   },
   tagRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+    gap: 10,
   },
   filterTag: {
     flex: 1,
-    backgroundColor: "#e0e0e0",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginRight: 10,
+    backgroundColor: "#e3eef7",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 20,
   },
   filterTagSelected: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#61ADE1",
   },
   filterTagText: {
-    color: "#000",
+    color: "#275777",
     fontSize: 16,
+    fontWeight: "600",
   },
   filterTagTextSelected: {
     color: "#fff",
   },
   deleteTagButton: {
-    padding: 8,
-  },
-  deleteTagText: {
-    fontSize: 18,
+    padding: 10,
   },
 });
