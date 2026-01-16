@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { usePet } from "./PetContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useEffect, useState } from "react";
+import { usePet } from "./PetContext";
 
 // Definicje stałych
 export const TASK_ICONS = [
@@ -175,9 +175,17 @@ const REWARD_CONFIG = {
   medium: 2,
   urgent: 3,
   overdue: 4,
+  low: 1,
+  medium: 2,
+  urgent: 3,
+  overdue: 4,
 };
 // Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
 const PENALTY_CONFIG = {
+  low: 5,
+  medium: 5,
+  urgent: 10,
+  overdue: 15,
   low: 5,
   medium: 5,
   urgent: 10,
@@ -275,6 +283,8 @@ export function TaskProvider({ children }) {
 
   const deleteTask = (taskId) => {
     setTasks((prevTasks) => {
+      // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
+      return prevTasks.filter((task) => task.id !== taskId);
       // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
       return prevTasks.filter((task) => task.id !== taskId);
     });

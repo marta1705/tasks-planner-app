@@ -1,8 +1,10 @@
-// AuthProvider.js
+// context/AuthContext.js
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getFirestore, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore"; // Importujemy setDoc dla bezpieczeństwa
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "../services/firebase";
+import { auth, db } from "../services/firebase"; // Upewnij się, że firebase.js eksportuje zainicjalizowane obiekty
+
+//import { doc, getFirestore, updateDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 

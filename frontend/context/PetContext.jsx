@@ -1,3 +1,5 @@
+// frontend/context/PetContext.jsx
+
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db } from "../services/firebase";
@@ -273,11 +275,13 @@ export function PetProvider({ children }) {
     const unsubscribe = onSnapshot(petDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        setPetName(data.petName || "Twój pupil");
+        setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
         setSelectedPetId(data.selectedPetId ?? 1);
 
         // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
-        setPetName(data.petName || petName);
-        setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
+        //setPetName(data.petName || petName);
+        //setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
         setTreatsBalance(
           data.treatsBalance !== undefined ? data.treatsBalance : 0
         );
