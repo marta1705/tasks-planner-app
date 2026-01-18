@@ -379,7 +379,7 @@ card: {
   nameContainer: { marginBottom: 15, width: "100%", alignItems: "center" },
   nameDisplayContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
   nameEditContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
-  nameInput: { fontSize: 24, fontWeight: "bold", borderBottomWidth: 2, borderBottomColor: "#3A6EA5", minWidth: 150, textAlign: "center" },
+  nameInput: { fontSize: 24, fontWeight: "bold", borderBottomWidth: 2, borderBottomColor: "#0379C8", minWidth: 150, textAlign: "center" },
   petName: {   fontSize: 24, fontWeight: "bold", marginBottom: 15, color: "#fff" },
   healthBarContainer: { width: "100%", marginBottom: 35 },
   healthBarBackground: { width: "100%", height: 24, backgroundColor: "#E0E0E0", borderRadius: 12, overflow: "hidden" },
@@ -405,7 +405,7 @@ card: {
   position: "absolute",
   top: -20, // przesunięcie nad kartą pupila
   right: 20, // po prawej stronie
-  backgroundColor: "#3A6EA5", // niebieskie tło
+  backgroundColor: "#0379C8", // niebieskie tło
   paddingVertical: 10,
   paddingHorizontal: 15,
   borderRadius: 20, // zaokrąglony
@@ -475,7 +475,7 @@ treatsButtonText: {
   petOptionName: { fontSize: 14, fontWeight: "600", textAlign: "center" },
 
   closeModalButton: {
-    backgroundColor: "#3A6EA5",
+    backgroundColor: "#0379C8",
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 15,
@@ -506,7 +506,7 @@ treatsButtonText: {
     color: '#FF9500',
   },
   rewardButton: {
-    backgroundColor: '#3A6EA5',
+    backgroundColor: '#0379C8',
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',

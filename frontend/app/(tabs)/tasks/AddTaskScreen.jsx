@@ -9,6 +9,7 @@ import {
   Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -18,13 +19,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Modal,
 } from "react-native";
 import { useTags } from "../../../context/TagsContext";
 import {
+  BASIC_ICONS,
   PRIORITY_OPTIONS,
   TASK_ICONS,
-  BASIC_ICONS,
   useTasks,
 } from "../../../context/TaskContext";
 
@@ -52,7 +52,7 @@ const getDefaultEndTime = (startTime) => {
     now.getMonth(),
     now.getDate(),
     startHour,
-    startMinute
+    startMinute,
   );
 
   // Dodajemy jedną godzinę
@@ -115,26 +115,26 @@ const createEventInCalendar = async (task) => {
   if (calendarStatus !== "granted") {
     Alert.alert(
       "Brak uprawnień do kalendarza",
-      "Nie można dodać zadania do Kalendarza Google bez Twojej zgody."
+      "Nie można dodać zadania do Kalendarza Google bez Twojej zgody.",
     );
     return null;
   }
 
   const calendars = await Calendar.getCalendarsAsync(
-    Calendar.EntityTypes.EVENT
+    Calendar.EntityTypes.EVENT,
   );
   const defaultCalendar =
     calendars.find(
       (cal) =>
         cal.isPrimary ||
         cal.title.toLowerCase().includes("task") ||
-        cal.title.toLowerCase().includes("default")
+        cal.title.toLowerCase().includes("default"),
     ) || calendars[0];
 
   if (!defaultCalendar) {
     Alert.alert(
       "Błąd Kalendarza",
-      "Nie znaleziono kalendarza do zapisu wydarzenia."
+      "Nie znaleziono kalendarza do zapisu wydarzenia.",
     );
     return null;
   }
@@ -145,7 +145,7 @@ const createEventInCalendar = async (task) => {
   if (!startDateObj || !endDateObj) {
     Alert.alert(
       "Błąd Daty",
-      "Nie można przetworzyć daty/czasu na wydarzenie w kalendarzu."
+      "Nie można przetworzyć daty/czasu na wydarzenie w kalendarzu.",
     );
     return null;
   }
@@ -189,14 +189,14 @@ const createEventInCalendar = async (task) => {
   try {
     const eventId = await Calendar.createEventAsync(
       defaultCalendar.id,
-      eventDetails
+      eventDetails,
     );
     return eventId;
   } catch (error) {
     console.error("Calendar integration error: ", error);
     Alert.alert(
       "Błąd Zapisu",
-      "Nie udało się zapisać wydarzenia w Kalendarzu Google."
+      "Nie udało się zapisać wydarzenia w Kalendarzu Google.",
     );
     return null;
   }
@@ -212,7 +212,7 @@ const TimePicker = ({ time, setTime, disabled }) => {
     if (selectedDate) {
       const newTime = `${String(selectedDate.getHours()).padStart(
         2,
-        "0"
+        "0",
       )}:${String(selectedDate.getMinutes()).padStart(2, "0")}`;
       setTime(newTime);
     }
@@ -286,7 +286,7 @@ export default function AddTaskScreen() {
   const [startTime, setStartTime] = useState(initialTime);
   const [endTime, setEndTime] = useState(getDefaultEndTime(initialTime));
   const [selectedPriority, setSelectedPriority] = useState(
-    PRIORITY_OPTIONS[0].value
+    PRIORITY_OPTIONS[0].value,
   );
   // Zastąp starą linię selectedIcon tymi dwiema:
   const [selectedIcon, setSelectedIcon] = useState(BASIC_ICONS[0]);
@@ -307,7 +307,7 @@ export default function AddTaskScreen() {
   const [showCustomRecurrencePicker, setShowCustomRecurrencePicker] =
     useState(false);
   const [customRecurrenceEndDate, setCustomRecurrenceEndDate] = useState(
-    formatDate(today)
+    formatDate(today),
   );
 
   // --- NOWA FUNKCJA: OBSŁUGA MODALU POWTARZANIA ---
@@ -319,7 +319,7 @@ export default function AddTaskScreen() {
       setRecurrenceRule(`custom:${newDateString}`);
       Alert.alert(
         "Powtarzanie Własne",
-        `Ustawiono powtarzanie do: ${newDateString}.`
+        `Ustawiono powtarzanie do: ${newDateString}.`,
       );
     }
   };
@@ -329,7 +329,7 @@ export default function AddTaskScreen() {
       if (Platform.OS === "web") {
         Alert.alert(
           "Błąd",
-          "Wybór daty końcowej dla powtarzania 'Własne' nie jest w pełni wspierany w widoku Web."
+          "Wybór daty końcowej dla powtarzania 'Własne' nie jest w pełni wspierany w widoku Web.",
         );
       } else {
         // Otwórz DateTimePicker, aby użytkownik wybrał datę końcową powtarzania
@@ -356,7 +356,7 @@ export default function AddTaskScreen() {
             const selectedValue = RECURRENCE_OPTIONS[buttonIndex].value;
             handleSetRecurrence(selectedValue);
           }
-        }
+        },
       );
     } else {
       const alertOptions = RECURRENCE_OPTIONS.map((option) => ({
@@ -368,7 +368,7 @@ export default function AddTaskScreen() {
       Alert.alert(
         "Ustaw Powtarzanie",
         "Wybierz regułę cykliczności:",
-        alertOptions
+        alertOptions,
       );
     }
   };
@@ -389,7 +389,7 @@ export default function AddTaskScreen() {
     if (!isAllDay && startDateTime < new Date()) {
       Alert.alert(
         "Błąd Czasu",
-        "Czas rozpoczęcia zadania nie może być wcześniejszy niż obecna chwila."
+        "Czas rozpoczęcia zadania nie może być wcześniejszy niż obecna chwila.",
       );
       return;
     }
@@ -397,7 +397,7 @@ export default function AddTaskScreen() {
     if (!isAllDay && endDateTime <= startDateTime) {
       Alert.alert(
         "Błąd Czasu",
-        "Czas zakończenia musi być późniejszy niż czas rozpoczęcia (chyba że to wydarzenie całodniowe)."
+        "Czas zakończenia musi być późniejszy niż czas rozpoczęcia (chyba że to wydarzenie całodniowe).",
       );
       return;
     }
@@ -443,12 +443,12 @@ export default function AddTaskScreen() {
       if (e.name === "AuthError") {
         Alert.alert(
           "Błąd logowania",
-          "Nie jesteś zalogowany lub baza danych jest niegotowa. Spróbuj się przelogować."
+          "Nie jesteś zalogowany lub baza danych jest niegotowa. Spróbuj się przelogować.",
         );
       } else {
         Alert.alert(
           "Błąd zapisu",
-          "Wystąpił krytyczny błąd zapisu zadania w chmurze. Sprawdź reguły bezpieczeństwa Firebase!"
+          "Wystąpił krytyczny błąd zapisu zadania w chmurze. Sprawdź reguły bezpieczeństwa Firebase!",
         );
       }
     } finally {
@@ -730,7 +730,7 @@ export default function AddTaskScreen() {
             <Text style={styles.calendarOptionText}>Powtórz</Text>
             <Text style={styles.calendarOptionValue}>
               {RECURRENCE_OPTIONS.find(
-                (r) => r.value === recurrenceRule.split(":")[0]
+                (r) => r.value === recurrenceRule.split(":")[0],
               )?.label ||
                 `Własne (${recurrenceRule.split(":")[1] || "Brak daty"})`}
             </Text>
@@ -780,7 +780,7 @@ export default function AddTaskScreen() {
             <Switch
               onValueChange={setSaveToCalendar}
               value={saveToCalendar}
-              trackColor={{ false: "#767577", true: "#007AFF" }}
+              trackColor={{ false: "#767577", true: "#0379C8" }}
               thumbColor={saveToCalendar ? "#f4f3f4" : "#f4f3f4"}
             />
           </View>
@@ -909,189 +909,118 @@ export default function AddTaskScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fff", // nowy kolor tła całego ekranu
   },
+
   scrollContent: {
     flex: 1,
     padding: 15,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  backButton: {
-    padding: 8,
-    width: 40, // Ustawienie stałej szerokości dla wyrównania
-    alignItems: "flex-start",
-  },
-  backButtonText: {
-    color: "#007AFF",
-    fontSize: 24, // Większa strzałka
-    fontWeight: "300",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  cancelButton: {
-    // Zastępuje placeholder
-    width: 80,
-    padding: 8,
-    alignItems: "flex-end",
-  },
-  cancelText: {
-    // Styl dla Anuluj
-    color: "#FF3B30",
-    fontSize: 16,
-    fontWeight: "600",
-  },
   formCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: "#61ADE1", // delikatny niebieski
+    borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
       },
-      android: {
-        elevation: 3,
-      },
-      default: {
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      },
+      android: { elevation: 6 },
     }),
   },
+
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#333",
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#fff", // kontrast dla panelu
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#555",
-    marginBottom: 8,
+    color: "#fff",
+    marginBottom: 6,
     marginTop: 10,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    padding: 12,
-    marginBottom: 20,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    borderColor: "#ddd",
+    padding: 14,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: "#fdfdfd", // jasne dla kontrastu
     color: "#000",
     fontSize: 16,
   },
-  multilineInput: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  dateTimeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  // ZMIANA: NOWY STYL DLA INPUTU DATY
+  multilineInput: { height: 100, textAlignVertical: "top" },
   dateInputText: {
     backgroundColor: "#f9f9f9",
     borderWidth: 1,
     borderColor: "#ddd",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    textAlign: "center",
+    padding: 14,
+    borderRadius: 12,
     fontSize: 16,
     color: "#000",
+    textAlign: "center",
   },
   timeInput: {
     flex: 0.8,
     backgroundColor: "#f9f9f9",
     borderWidth: 1,
     borderColor: "#ddd",
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
+    marginTop: 8,
   },
+
   timeInputDisabled: {
     backgroundColor: "#f0f0f0",
-    borderColor: "#e0e0e0",
+    borderColor: "#ddd",
     opacity: 0.7,
   },
-  timeInputText: {
-    fontSize: 16,
-    color: "#000",
-    textAlign: "center",
-  },
-  timeInputTextDisabled: {
-    color: "#999",
-  },
-  // --- Opcje Kalendarza ---
+  timeInputText: { fontSize: 16, color: "#000", textAlign: "center" },
+  timeInputTextDisabled: { color: "#999" },
+
   calendarOptionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  calendarOptionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  calendarOptionValue: {
-    fontSize: 16,
-    color: "#8E8E93",
-  },
-  // --- Priorytet ---
+  calendarOptionText: { fontSize: 16, color: "#333" },
+  calendarOptionValue: { fontSize: 16, color: "#8E8E93" },
+
   priorityContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
+    gap: 8,
   },
   priorityButton: {
     flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    padding: 12,
+    borderRadius: 16,
     alignItems: "center",
-    opacity: 0.6,
-    ...Platform.select({
-      default: {
-        boxShadow: "0 1px 1px rgba(0, 0, 0, 0.1)",
-      },
-    }),
+    opacity: 0.7,
   },
   prioritySelected: {
     opacity: 1,
     borderWidth: 2,
-    borderColor: "#333",
+    borderColor: "#275777",
   },
-  priorityText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  // --- Ikony ---
-  iconContainerScroll: {
-    paddingVertical: 5,
-  },
-  iconContainer: {
+  priorityText: { color: "#fff", fontWeight: "700" },
+
+  basicIconsGrid: {
     flexDirection: "row",
-    gap: 5,
-    marginBottom: 10,
+    flexWrap: "wrap",
+    gap: 8,
   },
   iconButton: {
     width: 50,
@@ -1102,50 +1031,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     borderColor: "transparent",
+    marginBottom: 8,
   },
   iconSelected: {
-    borderColor: "#007AFF",
-    backgroundColor: "#e5f0ff",
+    borderColor: "#275777",
+    backgroundColor: "#e5f3ff",
     borderWidth: 3,
   },
-  iconText: {
-    fontSize: 28,
-  },
-  // --- Tagi ---
-  tagInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+  iconText: { fontSize: 28 },
+
+  tagInputRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   tagInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#ddd",
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 16,
     fontSize: 16,
+    backgroundColor: "#fdfdfd",
     marginRight: 10,
-    backgroundColor: "#fff",
   },
   tagAddButton: {
-    backgroundColor: "#34C759",
+    backgroundColor: "#275777",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    borderRadius: 16,
     justifyContent: "center",
+    alignItems: "center",
   },
-  tagAddButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 10,
-    marginBottom: 5,
-  },
+  tagAddButtonText: { color: "#fff", fontWeight: "700" },
+  tagsContainer: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
   tagBubble: {
     backgroundColor: "#e0e0e0",
     borderRadius: 20,
@@ -1154,55 +1069,32 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  tagText: {
-    color: "#333",
-    fontSize: 14,
-  },
+  tagText: { color: "#333", fontSize: 14 },
   suggestedTag: {
-    backgroundColor: "#007AFF10",
+    backgroundColor: "#275777",
     borderWidth: 1,
-    borderColor: "#007AFF50",
+    borderColor: "#61ADE150",
   },
-  suggestedTagText: {
-    color: "#007AFF",
-  },
-  // --- Zapisz ---
+  suggestedTagText: { color: "#fff" },
+
   saveButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#275777", // mocniejszy kontrast z tłem
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: "center",
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 30,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  basicIconsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  moreIconsButton: {
-    paddingHorizontal: 12,
-    height: 48,
-    backgroundColor: "#eee",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    flex: 1,
-  },
-  moreIconsText: { color: "#007AFF", fontWeight: "bold" },
+  saveButtonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -1217,8 +1109,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 20,
   },
-  modalTitle: { fontSize: 20, fontWeight: "bold" },
-  closeModalText: { color: "#007AFF", fontSize: 16, fontWeight: "bold" },
+  modalTitle: { fontSize: 20, fontWeight: "700" },
+  closeModalText: { color: "#61ADE1", fontSize: 16, fontWeight: "700" },
   categorySection: { marginBottom: 20 },
   categoryTitle: {
     fontSize: 14,
@@ -1226,21 +1118,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textTransform: "uppercase",
   },
-  iconsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  iconsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   modalIconButton: {
     width: 55,
     height: 55,
     backgroundColor: "#f9f9f9",
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 8,
   },
   datePickerContainer: {
     backgroundColor: "#fff",
-    borderRadius: 8,
-    marginBottom: 20,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#ddd",
   },
 });

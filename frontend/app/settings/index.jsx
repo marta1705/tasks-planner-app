@@ -577,25 +577,28 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* Modal Pupil */}
-      <Modal
-        visible={petModalVisible}
-        transparent
-        onRequestClose={() => setPetModalVisible(false)}
-      >
+      <Modal visible={petModalVisible} transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.card, maxHeight: "85%", width: "92%" },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               Wybierz pupila
             </Text>
-            <View style={styles.petGrid}>
+
+            <ScrollView contentContainerStyle={styles.petGrid}>
               {petOptions.map((pet) => (
                 <TouchableOpacity
                   key={pet.id}
                   style={[
                     styles.petOption,
                     pet.id === selectedPetId && {
-                      borderWidth: 2,
-                      borderColor: colors.tint || "#6ac0f1",
+                      borderWidth: 3,
+                      borderColor: colors.tint,
+                      backgroundColor: "#6ac0f122",
                     },
                   ]}
                   onPress={() => handleSelectPet(pet)}
@@ -610,7 +613,8 @@ export default function SettingsScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
+
             <TouchableOpacity
               style={styles.closeModalButton}
               onPress={() => setPetModalVisible(false)}
@@ -620,6 +624,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
       <View style={styles.bottomBlueBackground} />
     </ScrollView>
   );
@@ -721,7 +726,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#c34545",
+    backgroundColor: "#e23737",
     paddingVertical: 14,
     borderRadius: 10,
   },
@@ -830,7 +835,12 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   petOption: { alignItems: "center", margin: 5, padding: 10, borderRadius: 10 },
-  petOptionImage: { width: 60, height: 60, marginBottom: 5 },
+  petOptionImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 8,
+  },
+
   petOptionName: { fontWeight: "bold" },
   closeModalButton: { marginTop: 20, padding: 10 },
   closeModalText: { color: "#FF3B30", fontSize: 16 },
