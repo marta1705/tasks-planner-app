@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useHabits } from "../../../context/HabitContext";
 import { useTasks } from "../../../context/TaskContext";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 function getMonthDates(date) {
   const year = date.getFullYear();
@@ -71,20 +72,20 @@ const HeatmapChart = ({ data, dates, isTaskChart = false }) => {
   }
 
   const getColor = (value) => {
-    if (value === null || value === 0) return "#F0F0F0";
+    if (value === null || value === 0) return "#e3eef7";
 
     if (isTaskChart) {
       // Dla zadań - skala od jasnego do ciemnego niebieskiego
       const intensity = Math.min(value / maxValue, 1);
-      if (intensity < 0.25) return "#BFDBFE";
-      if (intensity < 0.5) return "#93C5FD";
-      if (intensity < 0.75) return "#60A5FA";
-      return "#3B82F6";
+      if (intensity < 0.25) return "#c5e0f5";
+      if (intensity < 0.5) return "#8dc5ee";
+      if (intensity < 0.75) return "#61ade1";
+      return "#3d8bc2";
     } else {
       // Dla nawyków (procenty) - gradient
-      if (value < 25) return "#FEE2E2";
-      if (value < 50) return "#FED7AA";
-      if (value < 75) return "#FDE68A";
+      if (value < 25) return "#ffe5e7";
+      if (value < 50) return "#ffd4b8";
+      if (value < 75) return "#ffe68a";
       return "#86EFAC";
     }
   };
@@ -134,8 +135,8 @@ const HeatmapChart = ({ data, dates, isTaskChart = false }) => {
                 styles.legendBox,
                 {
                   backgroundColor: isTaskChart
-                    ? ["#F0F0F0", "#BFDBFE", "#93C5FD", "#60A5FA", "#3B82F6"][i]
-                    : ["#F0F0F0", "#FEE2E2", "#FED7AA", "#FDE68A", "#86EFAC"][
+                    ? ["#E3EEF7", "#C5E0F5", "#8DC5EE", "#61ADE1", "#3D8BC2"][i]
+                    : ["#E3EEF7", "#FFE5E7", "#FFD4B8", "#FFE68A", "#86EFAC"][
                         i
                       ],
                 },
@@ -248,6 +249,11 @@ export default function MonthlyStats() {
     (task) => task.isCompleted
   ).length;
 
+  const completedTasksBeforeDeadline = tasksThisMonth.filter(
+    (task) =>
+      task.isCompleted && task.completedAt.split("T")[0] <= task.deadline
+  );
+
   // Wszystkie ukończone zadania w tym miesiącu (bez względu na deadline)
   const completedTasksThisMonth = tasks.filter((task) => {
     if (!task.isCompleted || !task.completedAt) return false;
@@ -333,7 +339,7 @@ export default function MonthlyStats() {
   // Procent zadań ukończonych na czas
   const onTimePercentage =
     totalTasksThisMonth > 0
-      ? Math.round((completedTasksOntime / totalTasksThisMonth) * 100)
+      ? Math.round((completedTasksBeforeDeadline / totalTasksThisMonth) * 100)
       : 0;
 
   // Etykiety dni (1-31)
@@ -343,23 +349,30 @@ export default function MonthlyStats() {
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       {/* Nagłówek z miesiącem */}
       <View style={styles.statCard}>
-        <Text style={styles.statCardTitle}>
-          {monthName} {year}
-        </Text>
-        <Text
-          style={[styles.subsectionTitle, { marginTop: 8, marginBottom: 0 }]}
-        >
-          {monthDates[0]} - {monthDates[monthDates.length - 1]}
-        </Text>
+        <View style={styles.dateHeader}>
+          <Ionicons name="calendar" size={24} color="#61ade1" />
+          <View style={styles.dateTextContainer}>
+            {/* <Text style={styles.statCardTitle}>
+              {monthName} {year}
+            </Text> */}
+            <Text style={styles.statCardTitle}>Aktualny miesiąc</Text>
+            <Text style={styles.dateRange}>
+              {monthDates[0]} - {monthDates[monthDates.length - 1]}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Nawyki */}
       <View style={styles.statCard}>
         <View style={styles.statCardHeader}>
           <View style={styles.statCardTitleContainer}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="checkmark-done" size={20} color="#61ade1" />
+            </View>
             <Text style={styles.statCardTitle}>Nawyki</Text>
           </View>
         </View>
@@ -374,23 +387,32 @@ export default function MonthlyStats() {
         {/* Perfekcyjne dni */}
         <View style={styles.mainMetric}>
           <Text style={styles.label}>Dni z 100% wykonaniem</Text>
-          <Text style={styles.bigNumber}>{perfectDays}</Text>
+          <View style={styles.perfectDaysContainer}>
+            {/* <Ionicons name="star" size={28} color="#ffd700" /> */}
+            <Text style={styles.bigNumber}>{perfectDays}</Text>
+          </View>
         </View>
-        {/* 
-        <View style={styles.divider} /> */}
 
-        {/* Najlepszy nawyk */}
+        {/*  Najlepszy nawyk */}
         {bestHabit && (
           <>
             <View style={styles.divider} />
             <View style={styles.mainMetric}>
               <Text style={styles.label}>Najlepszy nawyk</Text>
-              <Text style={styles.bestHabitName}>{bestHabit.name}</Text>
-              <Text style={styles.bestHabitStats}>
-                {bestHabit.monthlyStats.completedDays}/
-                {bestHabit.monthlyStats.totalDays} dni (
-                {bestHabit.monthlyStats.percentage}%)
-              </Text>
+              <View style={styles.trophyContainer}>
+                <Ionicons name="trophy" size={24} color="#34C759" />
+                <Text style={styles.bestHabitName}>{bestHabit.name}</Text>
+              </View>
+
+              <View
+                style={[styles.statBadge, { backgroundColor: "#34c75920" }]}
+              >
+                <Text style={styles.bestHabitStats}>
+                  {bestHabit.monthlyStats.completedDays}/
+                  {bestHabit.monthlyStats.totalDays} dni (
+                  {bestHabit.monthlyStats.percentage}%)
+                </Text>
+              </View>
             </View>
           </>
         )}
@@ -401,12 +423,20 @@ export default function MonthlyStats() {
             <View style={styles.divider} />
             <View style={styles.mainMetric}>
               <Text style={styles.label}>Wymaga poprawy</Text>
-              <Text style={styles.worstHabitName}>{worstHabit.name}</Text>
-              <Text style={styles.worstHabitStats}>
-                {worstHabit.monthlyStats.completedDays}/
-                {worstHabit.monthlyStats.totalDays} dni (
-                {worstHabit.monthlyStats.percentage}%)
-              </Text>
+              <View style={styles.improvementContainer}>
+                <Ionicons name="alert-circle" size={24} color="#FF3B30" />
+                <Text style={styles.worstHabitName}>{worstHabit.name}</Text>
+              </View>
+
+              <View
+                style={[styles.statBadge, { backgroundColor: "#FF3B3020" }]}
+              >
+                <Text style={styles.worstHabitStats}>
+                  {worstHabit.monthlyStats.completedDays}/
+                  {worstHabit.monthlyStats.totalDays} dni (
+                  {worstHabit.monthlyStats.percentage}%)
+                </Text>
+              </View>
             </View>
           </>
         )}
@@ -419,12 +449,26 @@ export default function MonthlyStats() {
               <Text style={styles.subsectionTitle}>Lista nawyków</Text>
               {habitsWithMonthlyStats.map((habit) => (
                 <View key={habit.id} style={styles.habitRow}>
-                  <Text style={styles.habitName}>{habit.name}</Text>
+                  <View style={styles.habitNameContainer}>
+                    <View
+                      style={[
+                        styles.habitColorDot,
+                        { backgroundColor: habit.color || "#61ade1" },
+                      ]}
+                    />
+
+                    <Text style={styles.habitName}>{habit.name}</Text>
+                  </View>
                   <View style={styles.habitStatsContainer}>
                     <Text style={styles.habitNumbers}>
                       {habit.monthlyStats.completedDays}/
                       {habit.monthlyStats.totalDays}
                     </Text>
+                    <View style={styles.percentageBadge}>
+                      <Text style={styles.percentageText}>
+                        {habit.monthlyStats.percentage}%
+                      </Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -449,6 +493,9 @@ export default function MonthlyStats() {
       <View style={styles.statCard}>
         <View style={styles.statCardHeader}>
           <View style={styles.statCardTitleContainer}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="checkbox" size={20} color="#61ade1" />
+            </View>
             <Text style={styles.statCardTitle}>Zadania</Text>
           </View>
         </View>
@@ -467,21 +514,30 @@ export default function MonthlyStats() {
           <Text style={styles.bigNumber}>
             {completedTasksOntime}/{totalTasksThisMonth}
           </Text>
-          <Text style={styles.streakSubtext}>{onTimePercentage}% na czas</Text>
+          <View style={styles.onTimeBadge}>
+            <Ionicons name="time" size={16} color="#34C759" />
+            <Text style={styles.streakSubtext}>
+              {onTimePercentage}% na czas
+            </Text>
+          </View>
         </View>
-
-        <View style={styles.divider} />
 
         {/* Najpracowitszy dzień */}
         {busiestDay.date && busiestDay.count > 0 && (
           <>
+            <View style={styles.divider} />
+
             <View style={styles.mainMetric}>
               <Text style={styles.label}>
                 Najwięcej wykonanych zadań w dniu
               </Text>
-              <Text style={styles.bestHabitName}>
-                {parseInt(busiestDay.date.split("-")[2])} {monthName}
-              </Text>
+              <View style={styles.busiestDayContainer}>
+                <Ionicons name="flash" size={24} color="#61ade1" />
+                <Text style={styles.bestHabitName}>
+                  {parseInt(busiestDay.date.split("-")[2])} {monthName}
+                </Text>
+              </View>
+
               <Text style={styles.bestHabitStats}>
                 {busiestDay.count}{" "}
                 {busiestDay.count === 1
@@ -491,13 +547,13 @@ export default function MonthlyStats() {
                   : "zadań"}
               </Text>
             </View>
-            <View style={styles.divider} />
           </>
         )}
 
+        <View style={styles.divider} />
         {/* Wykres dzienny dla zadań */}
         <Text style={styles.subsectionTitle}>
-          Dzienna liczba Wykonanych zadań
+          Dzienna liczba wykonanych zadań
         </Text>
         <HeatmapChart
           data={dailyTasksData}
@@ -505,40 +561,62 @@ export default function MonthlyStats() {
           isTaskChart={true}
         />
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F7",
   },
   statCard: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  dateHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dateTextContainer: {
+    flex: 1,
+  },
+  dateRange: {
+    fontSize: 13,
+    color: "#999",
+    fontWeight: "600",
+    marginTop: 4,
   },
   statCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   statCardTitleContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e3eef7",
+    justifyContent: "center",
     alignItems: "center",
   },
   statCardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#000",
+    color: "#275777",
   },
   mainMetric: {
     alignItems: "center",
@@ -546,50 +624,86 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: "#8E8E93",
-    marginBottom: 8,
+    color: "#999",
+    marginBottom: 10,
     fontWeight: "600",
+    textAlign: "center",
   },
   bigNumber: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#007AFF",
+    fontSize: 52,
+    fontWeight: "800",
+    color: "#61ade1",
+  },
+  perfectDaysContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  trophyContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
   },
   bestHabitName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#000",
-    marginTop: 4,
+    color: "#275777",
     textAlign: "center",
   },
   bestHabitStats: {
     fontSize: 16,
-    color: "#007AFF",
-    marginTop: 4,
+    color: "#34C759",
     fontWeight: "600",
   },
+  statBadge: {
+    alignItems: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  improvementContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
   worstHabitName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#000",
-    marginTop: 4,
+    color: "#275777",
     textAlign: "center",
   },
   worstHabitStats: {
     fontSize: 16,
     color: "#FF3B30",
-    marginTop: 4,
     fontWeight: "600",
+  },
+  onTimeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    backgroundColor: "#e8f5e9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   streakSubtext: {
     fontSize: 14,
-    color: "#8E8E93",
-    marginTop: 4,
-    fontWeight: "500",
+    color: "#34c759",
+    fontWeight: "700",
+  },
+  busiestDayContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: "#e3eef7",
     marginVertical: 20,
   },
   habitsList: {
@@ -597,19 +711,31 @@ const styles = StyleSheet.create({
   },
   subsectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 12,
+    fontWeight: "700",
+    color: "#275777",
+    marginBottom: 16,
   },
   habitRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 8,
+  },
+  habitNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 10,
+  },
+  habitColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   habitName: {
     fontSize: 15,
-    color: "#000",
-    marginBottom: 8,
+    color: "#275777",
+    fontWeight: "500",
     flex: 1,
   },
   habitStatsContainer: {
@@ -620,26 +746,32 @@ const styles = StyleSheet.create({
   habitNumbers: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#007AFF",
+    color: "#61ade1",
   },
-  habitPercentage: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#8E8E93",
+  percentageBadge: {
+    backgroundColor: "#E3EEF7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  percentageText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#275777",
   },
   heatmapContainer: {
     marginTop: 8,
   },
   heatmapHeader: {
     flexDirection: "row",
-    marginBottom: 4,
+    marginBottom: 6,
     alignItems: "center",
   },
   heatmapDayLabel: {
     flex: 1,
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#8E8E93",
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#999",
     textAlign: "center",
   },
   heatmapRow: {
@@ -651,103 +783,39 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1,
     marginHorizontal: 2,
-    borderRadius: 4,
+    borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E5EA",
+    borderColor: "#e3eef7",
   },
   heatmapCellText: {
     fontSize: 10,
-    fontWeight: "600",
-    color: "#000",
+    fontWeight: "700",
+    color: "#275777",
   },
   heatmapLegend: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16,
-    gap: 4,
+    gap: 6,
   },
   legendText: {
     fontSize: 11,
-    color: "#8E8E93",
-    fontWeight: "500",
+    color: "#999",
+    fontWeight: "600",
   },
   legendColors: {
     flexDirection: "row",
-    gap: 3,
+    gap: 4,
     marginHorizontal: 8,
   },
   legendBox: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
-  },
-  chart: {
-    height: 200,
-  },
-  chartInner: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    height: 180,
-    gap: 2,
-    paddingHorizontal: 4,
-  },
-  barColumn: {
-    width: 20,
-    alignItems: "center",
-    height: "100%",
-    justifyContent: "flex-end",
-    paddingBottom: 24,
-  },
-  barArea: {
-    height: "100%",
-    width: "100%",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  barFill: {
-    width: "100%",
-    borderRadius: 4,
-    justifyContent: "flex-start",
-    alignItems: "center",
-    paddingTop: 4,
-    minHeight: 20,
-  },
-  barValue: {
-    fontSize: 8,
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  emptyBar: {
-    width: "100%",
-    height: 20,
-    backgroundColor: "#F0F0F0",
-    borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyBarText: {
-    fontSize: 8,
-    fontWeight: "600",
-    color: "#8E8E93",
-  },
-  barLabel: {
-    position: "absolute",
-    bottom: 4,
-    fontSize: 8,
-    color: "#666",
-    fontWeight: "600",
-  },
-  barBackground: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#F0F0F0",
-    borderRadius: 4,
+    borderColor: "#e3eef7",
   },
 });

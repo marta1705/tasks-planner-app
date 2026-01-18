@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useHabits } from "../../../context/HabitContext";
 import { useTasks } from "../../../context/TaskContext";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 function getCalendarWeekDates(date) {
   const day = date.getDay(); // 0 (niedziela) do 6 (sobota)
@@ -44,7 +45,7 @@ const BarChartComponent = ({
                     styles.barFill,
                     {
                       height: `${heightPercent}%`,
-                      backgroundColor: "#3B82F6",
+                      backgroundColor: "#61ade1",
                     },
                   ]}
                 >
@@ -192,21 +193,28 @@ export default function WeeklyStats() {
     <ScrollView style={styles.container}>
       {/* Nagłówek z datą aktualnego tygodnia */}
       <View style={styles.statCard}>
-        <Text style={styles.statCardTitle}>Aktualny tydzień</Text>
-        <Text
-          style={[styles.subsectionTitle, { marginTop: 8, marginBottom: 0 }]}
-        >
-          {thisWeekDates[0]} - {thisWeekDates[6]}
-        </Text>
+        <View style={styles.dateHeader}>
+          <Ionicons name="calendar" size={24} color="#61ade1" />
+          <View style={styles.dateTextContainer}>
+            <Text style={styles.statCardTitle}>Aktualny tydzień</Text>
+            <Text style={styles.dateRange}>
+              {thisWeekDates[0]} - {thisWeekDates[6]}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Nawyki*/}
       <View style={styles.statCard}>
         <View style={styles.statCardHeader}>
           <View style={styles.statCardTitleContainer}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="checkmark-done" size={20} color="#61ade1" />
+            </View>
             <Text style={styles.statCardTitle}>Nawyki</Text>
           </View>
         </View>
+
         <View style={styles.mainMetric}>
           <Text style={styles.label}>Średnie dzienne wykonanie</Text>
           <Text style={styles.bigNumber}>{averageHabitsDaily}%</Text>
@@ -220,11 +228,28 @@ export default function WeeklyStats() {
               <Text style={styles.subsectionTitle}>Lista nawyków</Text>
               {habitsWithWeeklyStats.map((habit) => (
                 <View key={habit.id} style={styles.habitRow}>
-                  <Text style={styles.habitName}>{habit.name}</Text>
-                  <Text style={styles.habitNumbers}>
-                    {habit.weeklyStats.completedDays}/
-                    {habit.weeklyStats.totalDays}
-                  </Text>
+                  <View style={styles.habitNameContainer}>
+                    <View
+                      style={[
+                        styles.habitColorDot,
+                        { backgroundColor: habit.color || "#61ade1" },
+                      ]}
+                    />
+
+                    <Text style={styles.habitName}>{habit.name}</Text>
+                  </View>
+
+                  <View style={styles.habitStatsContainer}>
+                    <Text style={styles.habitNumbers}>
+                      {habit.weeklyStats.completedDays}/
+                      {habit.weeklyStats.totalDays}
+                    </Text>
+                    <View style={styles.percentageBadge}>
+                      <Text style={styles.percentageText}>
+                        {habit.weeklyStats.percentage}%
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               ))}
             </View>
@@ -245,6 +270,9 @@ export default function WeeklyStats() {
       <View style={styles.statCard}>
         <View style={styles.statCardHeader}>
           <View style={styles.statCardTitleContainer}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="checkbox" size={20} color="#61ade1" />
+            </View>
             <Text style={styles.statCardTitle}>Zadania</Text>
           </View>
         </View>
@@ -282,33 +310,56 @@ export default function WeeklyStats() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F7",
   },
   statCard: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
   },
+  dateHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dateTextContainer: {
+    flex: 1,
+  },
+  dateRange: {
+    fontSize: 13,
+    color: "#999",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+
   statCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   statCardTitleContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e3eef7",
+    justifyContent: "center",
     alignItems: "center",
   },
   statCardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#000",
+    color: "#275777",
   },
   mainMetric: {
     alignItems: "center",
@@ -316,18 +367,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: "#8E8E93",
-    marginBottom: 8,
+    color: "#999",
+    marginBottom: 10,
     fontWeight: "600",
   },
   bigNumber: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#007AFF",
+    fontSize: 52,
+    fontWeight: "800",
+    color: "#61ade1",
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: "#e3eef7",
     marginVertical: 20,
   },
   habitsList: {
@@ -335,25 +386,56 @@ const styles = StyleSheet.create({
   },
   subsectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 12,
+    fontWeight: "700",
+    color: "#275777",
+    marginBottom: 16,
   },
   habitRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 8,
+  },
+  habitNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 10,
+  },
+  habitColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   habitName: {
     fontSize: 15,
-    color: "#000",
-    marginBottom: 8,
+    color: "#275777",
+    fontWeight: "500",
+    flex: 1,
   },
+  habitStatsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
   habitNumbers: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#007AFF",
+    color: "#61ade1",
   },
+  percentageBadge: {
+    backgroundColor: "#e3eef7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  percentageText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#275777",
+  },
+
   chart: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -391,7 +473,7 @@ const styles = StyleSheet.create({
   emptyBar: {
     width: "100%",
     height: 30,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#e3eef7",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -399,13 +481,13 @@ const styles = StyleSheet.create({
   emptyBarText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#8E8E93",
+    color: "#999",
   },
   barLabel: {
     position: "absolute",
     bottom: 4,
     fontSize: 11,
-    color: "#666",
+    color: "#275777",
     fontWeight: "600",
   },
   barBackground: {
@@ -413,7 +495,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "100%",
     height: "100%",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#e3eef7",
     borderRadius: 8,
   },
 });

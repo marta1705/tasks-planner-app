@@ -28,23 +28,27 @@ export default function Statistics() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.headerSection}>
         <Text style={styles.title}>Statystyki</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={[styles.card, { marginBottom: 10 }]}>
-          <TopNavigattion
-            options={tabs}
-            selectedIndex={selectedTab}
-            onSelect={setSelectedTab}
-            style={styles.segmentedControl}
-          />
-        </View>
-        {renderContent()}
+      {/* nawigacja */}
+      <View style={styles.navigationSection}>
+        <TopNavigattion
+          options={tabs}
+          selectedIndex={selectedTab}
+          onSelect={setSelectedTab}
+        />
+      </View>
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+      <View style={styles.statsPanel}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {renderContent()}
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -52,36 +56,45 @@ export default function Statistics() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+  },
+  headerSection: {
+    paddingBottom: 20,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 5,
+    fontSize: 36,
+    color: "#61ADE1",
+    marginBottom: 8,
+    letterSpacing: 2,
+    fontFamily: "AlfaSlabOne",
   },
+
+  // sekcja nawigacji
+  navigationSection: {
+    backgroundColor: "e3eef7",
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 15,
+  },
+
+  statsPanel: {
+    flex: 1,
+    backgroundColor: "#61ade1",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    marginTop: -10,
+  },
+
   content: {
     flex: 1,
-    padding: 15,
+    paddingHorizontal: 15,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  bottomSpacing: {
-    height: 20,
+  contentContainer: {
+    paddingBottom: 30,
   },
 });
