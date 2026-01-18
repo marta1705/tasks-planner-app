@@ -6,10 +6,15 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
-import { Swipeable } from "react-native-gesture-handler";
+import { Platform } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Feather from "@expo/vector-icons/Feather";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+
+const Swipeable =
+  Platform.OS === "web"
+    ? ({ children }) => children
+    : require("react-native-gesture-handler").Swipeable;
+
 
 const HabitItem = ({
   habit,

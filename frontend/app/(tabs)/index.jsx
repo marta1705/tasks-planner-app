@@ -33,7 +33,7 @@ export default function Index() {
       return () => {
         active = false;
       };
-    }, [])
+    }, []),
   );
 
   const actions = [
@@ -67,7 +67,7 @@ export default function Index() {
           { fontFamily: "AlfaSlabOne", fontSize: 20, marginVertical: 20 },
         ]}
       >
-        <Text style={{ color: "#61ADE1" }}>Witaj, {userName}!</Text>
+        <Text style={styles.title}>Witaj, {userName}!</Text>
       </Text>
       <Text style={[styles.text2, { color: colors.text2 }]}>
         <Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text>
@@ -93,6 +93,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     //backgroundColor: "#f5f5f5",
+  },
+  title: {
+    fontSize: 36,
+    fontFamily: "AlfaSlabOne",
+    color: "#61ADE1",
+    marginBottom: 5,
+    letterSpacing: 3,
   },
   text: {
     fontSize: 20,

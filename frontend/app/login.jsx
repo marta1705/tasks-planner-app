@@ -236,6 +236,8 @@ export default function LoginScreen() {
                   <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Zresetuj hasło</Text>
 
+                    <Text style={styles.modalContent}> Podaj adres e-mail, na który wyślemy link do zmiany hasła.</Text>
+
                     {resetError ? (
                       <View style={styles.errorBox}>
                         <Text style={styles.errorText}>⚠️ {resetError}</Text>
