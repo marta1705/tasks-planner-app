@@ -580,7 +580,6 @@ export default function SettingsScreen() {
       <Modal
         visible={petModalVisible}
         transparent
-        animationType="fade"
         onRequestClose={() => setPetModalVisible(false)}
       >
         <View style={styles.modalOverlay}>

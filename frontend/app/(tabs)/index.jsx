@@ -70,7 +70,7 @@ export default function Index() {
         <Text style={styles.title}>Witaj, {userName}!</Text>
       </Text>
       <Text style={[styles.text2, { color: colors.text2 }]}>
-        <Text style={{ color: "#275777" }}>Dziś jest Twój dzień!</Text>
+        <Text style={{ color: "#3A6EA5" }}>Dziś jest Twój dzień!</Text>
       </Text>
       <PetWidget />
       <FloatingAction
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     alignItems: "left",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#1e74c4ff",
+    backgroundColor: "#3A6EA5",
     borderRadius: 20,
     elevation: 3,
 
