@@ -152,6 +152,7 @@ export const PRIORITY_OPTIONS = [
   { value: "low", label: "Niski", color: "#34C759", basePoints: 5 },
 ];
 
+<<<<<<< HEAD
 // export const TASK_ICONS = [
 //     { icon: "📝", label: "Notatka" },
 //     { icon: "💻", label: "Praca" },
@@ -193,6 +194,8 @@ const PENALTY_CONFIG = {
 };
 // ---------------------------------------------------------------------------------------
 
+=======
+>>>>>>> f9b5b29 (Dopracowanie widoków kalendarza (Agenda, Dzień, Tydzień) i naprawa importów)
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {

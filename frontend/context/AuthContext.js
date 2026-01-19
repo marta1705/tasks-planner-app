@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // context/AuthContext.js
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore"; // Importujemy setDoc dla bezpieczeństwa
@@ -5,6 +6,13 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../services/firebase"; // Upewnij się, że firebase.js eksportuje zainicjalizowane obiekty
 
 //import { doc, getFirestore, updateDoc } from "firebase/firestore";
+=======
+// AuthProvider.js
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getFirestore, updateDoc } from "firebase/firestore";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../services/firebase";
+>>>>>>> f9b5b29 (Dopracowanie widoków kalendarza (Agenda, Dzień, Tydzień) i naprawa importów)
 
 const AuthContext = createContext();
 
