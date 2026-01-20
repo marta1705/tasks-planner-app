@@ -1,9 +1,6 @@
 // frontend/context/PetContext.jsx
 
-<<<<<<< HEAD
-=======
 import React, { createContext, useContext, useState, useEffect } from "react";
->>>>>>> f9b5b29 (Dopracowanie widoków kalendarza (Agenda, Dzień, Tydzień) i naprawa importów)
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
@@ -269,23 +266,8 @@ export function PetProvider({ children }) {
         const data = docSnap.data();
         setPetName(data.petName || "Twój pupil");
         setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
-<<<<<<< HEAD
-        setSelectedPetId(data.selectedPetId ?? 1);
-
-        // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
-        //setPetName(data.petName || petName);
-        //setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
-        setTreatsBalance(
-          data.treatsBalance !== undefined ? data.treatsBalance : 0
-        );
-        setPetImage(
-          data.petImage ||
-            require("../assets/images/dog/starting_position/dog_starting_position.png")
-        );
-=======
         setTreatsBalance(data.treatsBalance !== undefined ? data.treatsBalance : 0);
         setPetImage(data.petImage || require("../assets/images/dog/starting_position/dog_starting_position.png"));
->>>>>>> f9b5b29 (Dopracowanie widoków kalendarza (Agenda, Dzień, Tydzień) i naprawa importów)
         setDailyRewardStreak(data.dailyRewardStreak ?? 0);
         setLastRewardClaimDate(data.lastRewardClaimDate ?? null);
         setSelectedPetId(data.selectedPetId || 1);
@@ -372,13 +354,8 @@ export function PetProvider({ children }) {
       if (diffDays >= 3) healthPenalty = 15;
       else if (diffDays === 2) healthPenalty = 10;
       else if (diffDays === 1) healthPenalty = 5;
-<<<<<<< HEAD
-
-      currentStreak = 0; // Resetujemy passę
-=======
       
       currentStreak = 0;
->>>>>>> f9b5b29 (Dopracowanie widoków kalendarza (Agenda, Dzień, Tydzień) i naprawa importów)
     }
 
     const newStreak = currentStreak + 1;
