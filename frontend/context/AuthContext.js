@@ -1,10 +1,8 @@
-// context/AuthContext.js
+// AuthProvider.js
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // Importujemy setDoc dla bezpieczeństwa
+import { doc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "../services/firebase"; // Upewnij się, że firebase.js eksportuje zainicjalizowane obiekty
-
-//import { doc, getFirestore, updateDoc } from "firebase/firestore";
+import { auth } from "../services/firebase";
 
 const AuthContext = createContext();
 
@@ -52,7 +50,7 @@ export function AuthProvider({ children }) {
                 email: refreshedUser.email,
                 lastLogin: new Date().toISOString(),
               },
-              { merge: true }
+              { merge: true },
             ).catch((err) => {
               console.log("Firestore sync error:", err.message);
             });

@@ -1,7 +1,7 @@
 // frontend/context/PetContext.jsx
 
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
-import React, { createContext, useContext, useEffect, useState } from "react";
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
 
@@ -61,7 +61,6 @@ const PET_OPTIONS = [
       },
     },
   },
-
   {
     id: 2,
     name: "Kotek",
@@ -104,7 +103,6 @@ const PET_OPTIONS = [
       },
     },
   },
-
   {
     id: 3,
     name: "Kapibara",
@@ -147,7 +145,6 @@ const PET_OPTIONS = [
       },
     },
   },
-
   {
     id: 4,
     name: "Kaczuszka",
@@ -190,7 +187,6 @@ const PET_OPTIONS = [
       },
     },
   },
-
   {
     id: 5,
     name: "Rybka",
@@ -235,13 +231,6 @@ const PET_OPTIONS = [
   },
 ];
 
-const getVisualKeyByHealth = (hp) => {
-  if (hp >= 80) return "starting_position";
-  if (hp >= 60) return "wondering";
-  if (hp >= 40) return "rest";
-  return "breakdown";
-};
-
 export function PetProvider({ children }) {
   const [petHealth, setPetHealth] = useState(100);
   const [petName, setPetName] = useState("Twój pupil");
@@ -277,18 +266,8 @@ export function PetProvider({ children }) {
         const data = docSnap.data();
         setPetName(data.petName || "Twój pupil");
         setPetHealth(data.petHealth !== undefined ? data.petHealth : 100);
-        setSelectedPetId(data.selectedPetId ?? 1);
-
-        // AKTUALIZUJEMY STANY NA PODSTAWIE FIREBASE
-        //setPetName(data.petName || petName);
-        //setPetHealth(data.petHealth !== undefined ? data.petHealth : petHealth);
-        setTreatsBalance(
-          data.treatsBalance !== undefined ? data.treatsBalance : 0
-        );
-        setPetImage(
-          data.petImage ||
-            require("../assets/images/dog/starting_position/dog_starting_position.png")
-        );
+        setTreatsBalance(data.treatsBalance !== undefined ? data.treatsBalance : 0);
+        setPetImage(data.petImage || require("../assets/images/dog/starting_position/dog_starting_position.png"));
         setDailyRewardStreak(data.dailyRewardStreak ?? 0);
         setLastRewardClaimDate(data.lastRewardClaimDate ?? null);
         setSelectedPetId(data.selectedPetId || 1);
@@ -353,7 +332,6 @@ export function PetProvider({ children }) {
     return false;
   };
 
-  // LOGIKA NAWYKÓW I KAR ZA NIEOBECNOŚĆ
   const claimDailyReward = () => {
     const today = new Date();
     const todayStr = toDateString(today);
@@ -368,7 +346,6 @@ export function PetProvider({ children }) {
     let currentStreak = dailyRewardStreak;
     let healthPenalty = 0;
 
-    // Kara za przegapione nawyki
     if (lastRewardClaimDate && lastRewardClaimDate !== yesterdayStr) {
       const lastDate = new Date(lastRewardClaimDate);
       const diffTime = Math.abs(today - lastDate);
@@ -377,14 +354,13 @@ export function PetProvider({ children }) {
       if (diffDays >= 3) healthPenalty = 15;
       else if (diffDays === 2) healthPenalty = 10;
       else if (diffDays === 1) healthPenalty = 5;
-
-      currentStreak = 0; // Resetujemy passę
+      
+      currentStreak = 0;
     }
 
     const newStreak = currentStreak + 1;
-    let rewardAmount = 1; // Podstawa
+    let rewardAmount = 1;
 
-    // Bonusy za wykonanie nawyków na czas
     if (newStreak >= 21) rewardAmount = 15;
     else if (newStreak >= 10) rewardAmount = 10;
     else if (newStreak >= 5) rewardAmount = 5;

@@ -152,47 +152,6 @@ export const PRIORITY_OPTIONS = [
   { value: "low", label: "Niski", color: "#34C759", basePoints: 5 },
 ];
 
-// export const TASK_ICONS = [
-//     { icon: "📝", label: "Notatka" },
-//     { icon: "💻", label: "Praca" },
-//     { icon: "🛒", label: "Zakupy" },
-//     { icon: "🏋️", label: "Sport" },
-//     { icon: "📚", label: "Nauka" },
-//     { icon: "📊", label: "Raport" },
-//     { icon: "📧", label: "E-mail" },
-//     { icon: "🧹", label: "Sprzątanie" },r
-//     { icon: "🧺", label: "Pranie" },
-//     { icon: "🍽️", label: "Gotowanie" },
-//     { icon: "🛠️", label: "Naprawa" },
-//     { icon: "💡", label: "Pomysł" },
-//     { icon: "📞", label: "Telefon" },
-// ];
-
-// ✅ NOWE STAŁE PUNKTACJI (OPARTE NA ZAPISANYM PRIORYTECIE ZADANIA)
-// Nagrody w Smaczkach (tylko W TERMINIE)
-const REWARD_CONFIG = {
-  low: 1,
-  medium: 2,
-  urgent: 3,
-  overdue: 4,
-  low: 1,
-  medium: 2,
-  urgent: 3,
-  overdue: 4,
-};
-// Kary w XP (odejmowane ZDROWIE) (tylko PO TERMINIE)
-const PENALTY_CONFIG = {
-  low: 5,
-  medium: 5,
-  urgent: 10,
-  overdue: 15,
-  low: 5,
-  medium: 5,
-  urgent: 10,
-  overdue: 15,
-};
-// ---------------------------------------------------------------------------------------
-
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
@@ -261,7 +220,7 @@ export function TaskProvider({ children }) {
           };
         }
         return task;
-      })
+      }),
     );
   };
 
@@ -285,16 +244,14 @@ export function TaskProvider({ children }) {
     setTasks((prevTasks) => {
       // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
       return prevTasks.filter((task) => task.id !== taskId);
-      // Punkty nie są zabierane przy usuwaniu (zgodnie z Twoją prośbą)
-      return prevTasks.filter((task) => task.id !== taskId);
     });
   };
 
   const editTask = (taskId, updatedData) => {
     setTasks((prevTasks) =>
       prevTasks.map((task) =>
-        task.id === taskId ? { ...task, ...updatedData } : task
-      )
+        task.id === taskId ? { ...task, ...updatedData } : task,
+      ),
     );
   };
 
@@ -303,7 +260,7 @@ export function TaskProvider({ children }) {
     const filtered =
       selectedTags.length > 0
         ? tasks.filter((task) =>
-            task.hashtags.some((tag) => selectedTags.includes(tag))
+            task.hashtags.some((tag) => selectedTags.includes(tag)),
           )
         : tasks;
 
@@ -332,7 +289,7 @@ export function TaskProvider({ children }) {
       today: todayTasks.sort(sortByPriorityAndDeadline),
       upcoming: upcoming.sort(sortByPriorityAndDeadline),
       completed: completed.sort(
-        (a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0
+        (a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0,
       ),
     };
   };
